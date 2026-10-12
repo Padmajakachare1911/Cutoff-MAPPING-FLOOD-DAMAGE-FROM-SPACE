@@ -81,17 +81,18 @@ def train(data_root, out_dir, cfg: dict, resume: bool = False) -> Path:
     seed_everything(int(cfg.get("seed", 42)))
     device = "cuda" if torch.cuda.is_available() else "cpu"
     zero = list(cfg.get("zero_channels", []))
+    idx = cfg.get("index_csv", "index.csv")   # a frozen snapshot lets training run while the download continues
 
     stats_p = out / "stats.json"
     if stats_p.exists():
         st = json.loads(stats_p.read_text()); mean, std = np.array(st["mean"]), np.array(st["std"])
     else:
-        probe = KuroSiwoDataset(data_root, "train", np.zeros(7), np.ones(7))
+        probe = KuroSiwoDataset(data_root, "train", np.zeros(7), np.ones(7), index_csv=idx)
         mean, std = compute_channel_stats(probe, max_samples=int(cfg.get("max_stat_samples", 2000)))
         stats_p.write_text(json.dumps({"mean": mean.tolist(), "std": std.tolist(), "channels": list(CHANNELS)}))
     tr = KuroSiwoDataset(data_root, "train", mean, std, augment=True, seed=int(cfg.get("seed", 42)),
-                         zero_channels=zero, flips=bool(cfg.get("flips", False)))
-    va = KuroSiwoDataset(data_root, "val", mean, std, zero_channels=zero)
+                         zero_channels=zero, flips=bool(cfg.get("flips", False)), index_csv=idx)
+    va = KuroSiwoDataset(data_root, "val", mean, std, zero_channels=zero, index_csv=idx)
     nw = int(cfg.get("num_workers", 2))
     tl = DataLoader(tr, batch_size=int(cfg.get("batch_size", 16)), shuffle=True, num_workers=nw, drop_last=True,
                     pin_memory=device == "cuda", persistent_workers=nw > 0)
