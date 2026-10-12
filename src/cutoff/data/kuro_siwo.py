@@ -214,7 +214,8 @@ class KuroSiwoDataset:
         self.root = Path(root)
         rows = list(csv.DictReader((self.root / index_csv).open()))
         keep = set(map(str, events)) if events is not None else None
-        self.rows = [r for r in rows if r["split"] == split and (keep is None or r["event"] in keep)]
+        self.rows = [r for r in rows if r.get("split") == split and r.get("path") and r.get("lat")
+                     and (keep is None or r["event"] in keep)]          # skip a half-written last row
         if not self.rows:
             raise ValueError(f"no samples for split={split} under {self.root}")
         self.events = sorted({r["event"] for r in self.rows}, key=lambda e: (len(e), e))
