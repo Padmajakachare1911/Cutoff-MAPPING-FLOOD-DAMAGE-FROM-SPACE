@@ -171,37 +171,38 @@ def cmd_fetch(args):
     if new_csv:
         w.writeheader()
     quota = {"val": args.val_per_event, "test": args.test_per_event, "train": args.train_per_event}
-    excluded = 0
-    total_bytes = 0
-    for split in args.splits:
-        for ev in map(str, splits[split]):
-            ev_segs = [s for s in segs if s["event"] == ev and s["aoi"] != "00"]
-            c = counts.setdefault((split, ev), {"n": 0, "flood": 0})
-            q = quota[split]
-            q_flood = math.ceil(q * args.train_flood_share) if split == "train" else 0
-            gb = sum(s["end"] - s["start"] for s in ev_segs) / 1e9
-            print(f"[{split}] event {ev}: {len(ev_segs)} segments ~{gb:.1f} GB raw, have {c['n']}/{q}", flush=True)
-            if args.dry_run or c["n"] >= q or not ev_segs:
-                continue
+    lock = threading.Lock()                     # guards the CSV writer, `have` and the totals
+    tot = {"excluded": 0, "bytes": 0}
 
-            def want_more():
-                return c["n"] < q
+    def fetch_event(split: str, ev: str) -> None:
+        ev_segs = [s for s in segs if s["event"] == ev and s["aoi"] != "00"]
+        c = counts.setdefault((split, ev), {"n": 0, "flood": 0})
+        q = quota[split]
+        q_flood = math.ceil(q * args.train_flood_share) if split == "train" else 0
+        gb = sum(s["end"] - s["start"] for s in ev_segs) / 1e9
+        print(f"[{split}] event {ev}: {len(ev_segs)} segments ~{gb:.1f} GB raw, have {c['n']}/{q}", flush=True)
+        if args.dry_run or c["n"] >= q or not ev_segs:
+            return
 
-            def on_sample(e, aoi, sid, files):
-                nonlocal excluded
-                if sid in have or c["n"] >= q:
-                    return
-                rec = ks.decode_sample(files)
-                if rec is None:
-                    return
-                m = rec["meta"]
-                if ks.near_trishuli(m["lon"], m["lat"]):
-                    excluded += 1
-                    return
-                is_flood = m["flood_frac"] > 0.01
-                if split == "train" and not is_flood and (c["n"] - c["flood"]) >= q - q_flood:
-                    return  # keep >= train_flood_share of train samples with flood pixels
-                p = ks.save_sample(rec, DATA / split / e / f"{aoi}_{sid}.npz")
+        def want_more():
+            return c["n"] < q
+
+        def on_sample(e, aoi, sid, files):
+            if sid in have or c["n"] >= q:
+                return
+            rec = ks.decode_sample(files)
+            if rec is None:
+                return
+            m = rec["meta"]
+            if ks.near_trishuli(m["lon"], m["lat"]):
+                with lock:
+                    tot["excluded"] += 1
+                return
+            is_flood = m["flood_frac"] > 0.01
+            if split == "train" and not is_flood and (c["n"] - c["flood"]) >= q - q_flood:
+                return  # keep >= train_flood_share of train samples with flood pixels
+            p = ks.save_sample(rec, DATA / split / e / f"{aoi}_{sid}.npz")
+            with lock:
                 have.add(sid)
                 c["n"] += 1
                 c["flood"] += is_flood
@@ -213,27 +214,33 @@ def cmd_fetch(args):
                     fcsv.flush()
                     print(f"   {split}/{e}: {c['n']}/{q} (flood {c['flood']})", flush=True)
 
-            for seg in ev_segs:
-                if not want_more():
-                    break
-                url, _ = resolve(seg["tar"])
-                start, tries = seg["start"], 0
-                while start is not None and want_more() and tries < 6:
-                    n, resume_at, err = stream_segment(seg, url, start, want_more, on_sample,
-                                                       args.max_gb_per_event * 1e9)
-                    total_bytes += n
-                    if err is not None:
-                        tries += 1
-                        print(f"   retry {tries} after {type(err).__name__}: {err}", flush=True)
-                        start = (max(resume_at - 4096, seg["start"]) // 512) * 512
-                        time.sleep(2 ** tries)
-                    else:
-                        start = None
+        for seg in ev_segs:
+            if not want_more():
+                break
+            url, _ = resolve(seg["tar"])
+            start, tries = seg["start"], 0
+            while start is not None and want_more() and tries < 6:
+                n, resume_at, err = stream_segment(seg, url, start, want_more, on_sample, args.max_gb_per_event * 1e9)
+                with lock:
+                    tot["bytes"] += n
+                if err is not None:
+                    tries += 1
+                    print(f"   retry {tries} ({split}/{ev}) after {type(err).__name__}: {err}", flush=True)
+                    start = (max(resume_at - 4096, seg["start"]) // 512) * 512
+                    time.sleep(2 ** tries)
+                else:
+                    start = None
+        with lock:
             fcsv.flush()
-            print(f"[{split}] event {ev}: done {c['n']} (flood {c['flood']}); streamed {total_bytes/1e9:.1f} GB total",
+            print(f"[{split}] event {ev}: done {c['n']} (flood {c['flood']}); streamed {tot['bytes']/1e9:.1f} GB total",
                   flush=True)
+
+    jobs = [(split, str(ev)) for split in args.splits for ev in splits[split]]
+    with ThreadPoolExecutor(1 if args.dry_run else args.jobs) as ex:     # one HTTP stream per event
+        for f in [ex.submit(fetch_event, s, e) for s, e in jobs]:
+            f.result()
     fcsv.close()
-    print(f"excluded near Trishuli: {excluded}; total streamed {total_bytes/1e9:.1f} GB")
+    print(f"excluded near Trishuli: {tot['excluded']}; total streamed {tot['bytes']/1e9:.1f} GB")
 
 
 def main():
@@ -250,6 +257,7 @@ def main():
     b.add_argument("--train-per-event", type=int, default=450)
     b.add_argument("--train-flood-share", type=float, default=0.5)
     b.add_argument("--max-gb-per-event", type=float, default=6.0)
+    b.add_argument("--jobs", type=int, default=6, help="events downloaded in parallel (CDN limits per stream)")
     b.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     {"index": cmd_index, "fetch": cmd_fetch}[args.cmd](args)
