@@ -56,6 +56,22 @@ This file is kept current after every P2 task, so another agent can continue at 
 - **D9:** see master plan; implemented in `geo/change.py`.
 - B0 baseline formula is documented in `ml/baselines.py` (soft 1 dB sigmoids around Otsu + a 3 dB drop).
 
+## Results so far (validation events only; NOT the held-out test)
+| Model | Data | Val flood IoU | Notes |
+|---|---|---|---|
+| b0 (Otsu change rule) | — | 0.357 | per-patch Otsu |
+| B1 released Kuro Siwo SNUNet | — | 0.624 | input order pre→post (post→pre = 0.000) |
+| p7_early (7 ch, with slope) | 60 % snapshot (6004 train, 20 events) | 0.651 (best epoch 11/17) | τ = 0.40, T = 1.23; `C:\cutoff_data\runs\p7_early\p7_early.pt` |
+| b3_no_slope_early | same snapshot | (running) | D6 evidence |
+
+Validation is noisy (6 events, event 279 = 61 % of samples; ±0.05 between epochs) and the best epoch was selected on it, so these are optimistic. E1 on the 10 test events is the real comparison.
+
+## Findings that affect other streams (IMPORTANT)
+1. **P1: speckle filtering is mandatory.** On the mock valley (raw gamma speckle), p7_early gave flood probability 0.05 in the flood corridor; after a 7×7 smoothing (approximating Kuro Siwo's Lee Sigma) it gave 0.41 (steep corridor) and 0.82–0.84 (flat corridor). Kuro Siwo inputs are Lee-Sigma filtered, so the pipeline's S1 rasters must be too (P1.2 `lee_sigma`).
+2. **The slope channel teaches "no floods on steep slopes".** With the mock flood corridor on a 22° slope (the mock valley has no flat floor), flood probability fell to 0.04–0.41; on a flat floor it was ~0.83. That is sensible for lowland Kuro Siwo, but in Himalayan gorges GLO-30 smooths the valley walls into the floor (HAND/slope inflated), so real flooded floors can look 15–25° steep and the slope model would **silently suppress** them. Gating already handles steep terrain by downgrading to "possible" (never deleting). The final model choice (D6) therefore weighs this physical argument as well as validation IoU: prefer the no-slope model unless it is clearly worse on validation (beyond the ~0.03 noise).
+3. **P4: the mock run is unrealistic for model testing**: raw speckle and no flat valley floor. Use it for contract/UI tests only, not for judging model output.
+4. **Kuro Siwo label 3 = unannotated**, ignored in training and evaluation (their trainers use ignore_index=3).
+
 ## Known limitations / open items
 - Kuro Siwo `MK0_DEM` comes from SNAP SRTM terrain correction (not Copernicus DEM). Slope at training is from that DEM; at inference from GLO-30 (the plan records this as a known domain difference).
 - Stable-steep FPR on Kuro Siwo test events will have little support (lowland events); report the support px.
