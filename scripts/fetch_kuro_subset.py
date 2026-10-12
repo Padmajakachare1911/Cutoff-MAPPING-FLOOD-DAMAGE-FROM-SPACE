@@ -29,6 +29,7 @@ from cutoff.data import kuro_siwo as ks  # noqa: E402
 
 DATA = Path(os.environ.get("CUTOFF_DATA_DIR", "C:/cutoff_data")) / "kuro"
 SEG_INDEX = ROOT / "configs" / "kuro_grd_segments.json"
+PROGRESS = DATA / "progress.json"   # per-segment resume offsets (always a real tar header)
 CSV_FIELDS = ["path", "split", "event", "aoi", "sample", "flood_frac", "perm_frac", "valid_frac",
               "has_dem", "lon", "lat"]
 _tls = threading.local()
@@ -125,31 +126,39 @@ class _Counting:
         return b
 
 
-def stream_segment(seg, url, start, quota_fn, on_sample, max_bytes):
-    """Stream [start, seg.end) and feed matching samples to on_sample until quota_fn() is False."""
-    r = session().get(url, headers={"Range": f"bytes={start}-{seg['end'] - 1}"}, stream=True, timeout=120)
+def stream_segment(seg, url, start, stop, quota_fn, on_sample):
+    """Stream bytes [start, stop) of a tar (start = a header offset) and feed samples of seg's key.
+
+    Returns (bytes read, absolute offset of the last sample seen, status) with status:
+      "done"  - moved past the key, quota met, or segment end reached
+      "more"  - chunk ended normally; continue from the last sample's header
+      "error" - connection dropped / bad data; retry from the last sample's header
+    """
+    r = session().get(url, headers={"Range": f"bytes={start}-{stop - 1}"}, stream=True, timeout=120)
     r.raise_for_status()
     r.raw.decode_content = True
     cnt = _Counting(r.raw)
-    seen = False
-    last_off = 0
+    seen, last_abs = False, start
+    status = "more" if stop < seg["end"] else "done"
     try:
         for ev, aoi, sid, files, rel in ks.iter_samples(cnt):
-            last_off = rel
+            last_abs = start + rel
             if (ev, aoi) != (seg["event"], seg["aoi"]):
                 if seen:
+                    status = "done"
                     break
                 continue
             seen = True
             on_sample(ev, aoi, sid, files)
-            if not quota_fn() or cnt.n > max_bytes:
+            if not quota_fn():
+                status = "done"
                 break
-    except Exception as e:  # truncated tail at seg end, or connection drop
-        if not isinstance(e, (EOFError,)) and "unexpected end" not in str(e):
-            r.close()
-            return cnt.n, start + last_off, e
+    except Exception as e:
+        truncated = isinstance(e, EOFError) or "unexpected end" in str(e) or cnt.n >= stop - start - 1024
+        if not truncated:
+            status = f"error: {type(e).__name__}: {e}"
     r.close()
-    return cnt.n, None, None
+    return cnt.n, last_abs, status
 
 
 def cmd_fetch(args):
@@ -171,7 +180,8 @@ def cmd_fetch(args):
     if new_csv:
         w.writeheader()
     quota = {"val": args.val_per_event, "test": args.test_per_event, "train": args.train_per_event}
-    lock = threading.Lock()                     # guards the CSV writer, `have` and the totals
+    lock = threading.Lock()                     # guards the CSV writer, `have`, progress and the totals
+    progress = json.loads(PROGRESS.read_text()) if PROGRESS.exists() else {}
     tot = {"excluded": 0, "bytes": 0}
 
     def fetch_event(split: str, ev: str) -> None:
@@ -214,25 +224,38 @@ def cmd_fetch(args):
                     fcsv.flush()
                     print(f"   {split}/{e}: {c['n']}/{q} (flood {c['flood']})", flush=True)
 
+        chunk = int(args.chunk_mb * 1024 * 1024)
         for seg in ev_segs:
             if not want_more():
                 break
+            key = f"{seg['tar']}:{seg['start']}:{seg['aoi']}"
+            with lock:
+                start = progress.get(key, seg["start"])
+            if start >= seg["end"]:
+                continue                                   # segment already exhausted in an earlier run
             url, _ = resolve(seg["tar"])
-            start, tries = seg["start"], 0
-            while start is not None and want_more() and tries < 6:
-                n, resume_at, err = stream_segment(seg, url, start, want_more, on_sample, args.max_gb_per_event * 1e9)
+            fails = 0
+            while start is not None and start < seg["end"] and want_more() and fails < 8:
+                stop = min(seg["end"], start + chunk)      # short ranges: the CDN drops long streams
+                n, last_abs, status = stream_segment(seg, url, start, stop, want_more, on_sample)
                 with lock:
                     tot["bytes"] += n
-                if err is not None:
-                    tries += 1
-                    print(f"   retry {tries} ({split}/{ev}) after {type(err).__name__}: {err}", flush=True)
-                    time.sleep(2 ** tries)
-                    # resume at the next REAL tar header after the last good sample (an arbitrary
-                    # 512-aligned offset is usually inside file data -> "invalid header")
-                    hit = probe(url, max(resume_at, seg["start"]))
-                    start = hit[0] if hit else None
-                else:
+                if status == "done":
+                    nxt = seg["end"] if want_more() else last_abs
                     start = None
+                elif status.startswith("error"):
+                    fails += 1
+                    print(f"   retry {fails} ({split}/{ev}) after {status}", flush=True)
+                    time.sleep(min(2 ** fails, 60))
+                    hit = probe(url, last_abs)             # next REAL header (never an arbitrary offset)
+                    nxt = start = hit[0] if hit else None
+                else:
+                    fails = 0
+                    hit = probe(url, last_abs if last_abs > start else stop)
+                    nxt = start = hit[0] if hit else None
+                with lock:
+                    progress[key] = seg["end"] if nxt is None else nxt
+                    PROGRESS.write_text(json.dumps(progress))
         with lock:
             fcsv.flush()
             print(f"[{split}] event {ev}: done {c['n']} (flood {c['flood']}); streamed {tot['bytes']/1e9:.1f} GB total",
@@ -259,7 +282,7 @@ def main():
     b.add_argument("--test-per-event", type=int, default=1500)
     b.add_argument("--train-per-event", type=int, default=450)
     b.add_argument("--train-flood-share", type=float, default=0.5)
-    b.add_argument("--max-gb-per-event", type=float, default=6.0)
+    b.add_argument("--chunk-mb", type=float, default=96.0, help="HTTP range per request")
     b.add_argument("--jobs", type=int, default=6, help="events downloaded in parallel (CDN limits per stream)")
     b.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
