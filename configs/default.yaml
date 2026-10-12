@@ -1,0 +1,79 @@
+# Cutoff run configuration. Values marked FROZEN are fixed at tag `frozen-v1` (before any EMSR927 check)
+# and must never be tuned on EMSR927. Change via PR only.
+run:
+  pixel_m: 10                      # analysis grid; UTM zone from AOI centroid (cutoff.geo.grid)
+  cache_dir: cache/
+  out_root: outputs/
+
+s1:
+  stac_url: https://stac.dataspace.copernicus.eu/v1     # verified 2026-10-12
+  collection: sentinel-1-grd                             # items carry sat:relative_orbit, sat:orbit_state
+  pre_window_days: 48
+  post_window_days: 12
+  max_pre: 3
+  min_coverage: 0.8
+  require_pols: [VV, VH]
+  backend_for_mode: {cached: cached, fast: sentinelhub, full: snap}
+  sentinelhub:
+    process_url: https://sh.dataspace.copernicus.eu/api/v1/process
+    token_url: https://identity.dataspace.copernicus.eu/auth/realms/CDSE/protocol/openid-connect/token
+    back_coeff: SIGMA0_ELLIPSOID   # matches Kuro Siwo (SNAP Calibration sigma0, no terrain flattening)
+    orthorectify: true
+    dem_instance: COPERNICUS_30
+    speckle_filter: NONE           # we filter locally with geo/speckle.py (same code for every backend)
+  speckle: {type: lee_sigma, window: 7, target: 3, sigma: 0.9}   # Kuro Siwo graph values (verified)
+  shadow_layover_lia_deg: [0, 90]  # LIA outside (0, 90) -> unobservable
+
+dem:
+  source: https://copernicus-dem-30m.s3.amazonaws.com   # public, no auth; tiles Copernicus_DSM_COG_10_N28_00_E085_00_DEM
+  hand_buffer_m: 3000
+  stream_upa_km2: 1.0
+
+s2:
+  enabled: true
+  collection: sentinel-2-l2a
+  max_days_from_s1: 5
+  min_clear_fraction: 0.10
+  clear_scl: [4, 5, 6, 7]          # snow (11) excluded from "clear" on purpose (MNDWI unreliable on snow)
+  mndwi_threshold: 0.0
+
+model:
+  checkpoint: models/cutoff_unet_v1.pt   # contains mean/std, temperature, tau, channels, contract_version
+  tile: 224
+  overlap: 64
+  batch: 8
+
+rules:                              # FROZEN
+  k_sigma: 3.0
+  hand_corridor_m: 60
+  hand_stable_m: 100
+  stable_strata: 3                  # sigma estimated per pre-event VV tercile (D9)
+  min_component_px: 20
+
+gating:                             # FROZEN
+  p_high: 0.5                       # replaced by tau from the checkpoint when present
+  slope_max_deg: 15
+  hand_max_m: 30
+
+osm:
+  snapshot: "2026-07-27T00:00:00Z"  # PS: latest pre-event snapshot; asserted < event datetime
+  api_v2: https://api.heigit.org/ohsome-api/v2-rc      # needs OHSOME_API_KEY (header Authorization)
+  api_v1: https://api.ohsome.org/v1                    # fallback; shut down 2026-11-30
+  tile_deg: 0.1
+
+access:                             # FROZEN
+  access_buffer_km: 15              # roads/places/health fetched for AOI + 15 km (targets often lie outside the AOI)
+  scenarios: [A, B, C]
+  degraded_ratio: 1.5
+  snap_max_m: 500
+  max_segment_m: 100
+  buffer_a_m: 15
+  min_closed_length_b_m: 50
+  bridge_approach_m: 25
+  vehicle_tiers: [road, track]      # trails are reported separately, not used for "road connection"
+  target_kinds: [hospital, clinic, health_post, town, city]
+
+flowpath:
+  dem_res_m: 30
+  max_length_km: 150
+  settlement_buffer_m: 500

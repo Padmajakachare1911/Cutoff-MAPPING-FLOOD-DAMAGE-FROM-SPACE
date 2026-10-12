@@ -1,0 +1,32 @@
+# data, outputs and secrets never go to git
+# (leading slash = repo root only; src/cutoff/data/ is code and MUST stay tracked)
+/reference/
+/data/
+/cache/
+/outputs/
+/models/*.pt
+*.npz
+*.npy
+*.SAFE/
+*.zip
+.env
+*.env
+credentials*.json
+
+# python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+.ipynb_checkpoints/
+
+# os / editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# agent scratch
+.superpowers/

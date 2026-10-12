@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cutoff"
+version = "0.1.0"
+description = "Terrain-gated SAR flood/debris mapping with settlement isolation (Multimodal AI Hackathon 2026, Track B)"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = [
+  "numpy>=1.26", "scipy>=1.11", "pyyaml>=6", "pydantic>=2.6", "affine>=2.4", "pyproj>=3.6",
+  "rasterio>=1.3.9", "geopandas>=0.14", "shapely>=2.0", "pyogrio>=0.7", "pyarrow>=14",
+  "networkx>=3.2", "requests>=2.31", "httpx>=0.27", "pystac-client>=0.7", "pyflwdir>=0.5.8",
+  "jinja2>=3.1", "psutil>=5.9",
+]
+
+[project.optional-dependencies]
+ml = ["torch>=2.2", "segmentation-models-pytorch>=0.3.3", "huggingface_hub>=0.23"]
+app = ["streamlit>=1.33", "folium>=0.16", "streamlit-folium>=0.20", "matplotlib>=3.8"]
+pdf = ["weasyprint>=60", "xhtml2pdf>=0.2.15", "pypdf>=4"]
+dev = ["pytest>=8", "ruff>=0.4"]
+
+[project.scripts]
+cutoff = "cutoff.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+  "network: needs internet + credentials (skipped in CI)",
+  "gpu: needs CUDA",
+  "slow: > 60 s",
+]
+
+[tool.ruff]
+line-length = 120

@@ -1,0 +1,12 @@
+# Official Kuro Siwo event split (activation IDs), copied from
+# github.com/Orion-AI-Lab/KuroSiwo configs/train/data_config.json (verified 2026-10-12).
+# Never mix events across splits. Never put Trishuli/EMSR927 data in any split.
+source: Orion-AI-Lab/KuroSiwo configs/train/data_config.json
+train: [130, 470, 555, 118, 174, 324, 421, 554, 427, 518, 502, 498, 497, 496, 492, 147, 267, 273,
+        275, 417, 567, 1111011, 1111004, 1111009, 1111010, 1111006, 1111005]
+val: [514, 559, 279, 520, 437, 1111003, 1111008]
+test: [321, 561, 445, 562, 411, 1111002, 277, 1111007, 205, 1111013]
+# Kuro Siwo covers 2015-2022 events; drop any event within 100 km of the Trishuli corridor anyway
+exclude_within_km_of: {lat: 28.1, lon: 85.3, km: 100}
+# Reference values from the same file (linear sigma0, VV/VH): mean [0.0953, 0.0264], std [0.0427, 0.0215],
+# clamp_input 0.15. We do NOT reuse them: our model normalises dB channels with stats from our training subset.
