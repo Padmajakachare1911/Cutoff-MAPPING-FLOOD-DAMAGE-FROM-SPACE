@@ -67,6 +67,21 @@ def test_dataset_shapes_ignore_and_normalisation(store):
     assert len(ds) == 4 and ds.events == ["130", "470"]
 
 
+def test_label_3_is_ignored(tmp_path):
+    rec = _rec("130")
+    rec["mask"][100:110, 100:110] = 3                      # Kuro Siwo 'unannotated'
+    p = ks.save_sample(rec, tmp_path / "train" / "130" / "x.npz")
+    with (tmp_path / "index.csv").open("w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=["path", "split", "event", "aoi", "sample", "flood_frac", "perm_frac",
+                                          "valid_frac", "has_dem", "lon", "lat"])
+        w.writeheader()
+        w.writerow({"path": str(p.relative_to(tmp_path)), "split": "train", "event": "130", "aoi": "01",
+                    "sample": "x", "flood_frac": 0.1, "perm_frac": 0.1, "valid_frac": 1, "has_dem": True,
+                    "lon": 90, "lat": 23})
+    _, y = ks.KuroSiwoDataset(tmp_path, "train", np.zeros(7), np.ones(7))[0]
+    assert (y[100:110, 100:110] == IGNORE_INDEX).all() and int(y.max()) == IGNORE_INDEX and 3 not in y.unique()
+
+
 def test_zero_channels_and_augmentation(store):
     ds = ks.KuroSiwoDataset(store, "train", mean=np.zeros(7), std=np.ones(7), zero_channels=[6],
                             augment=True, seed=1)
