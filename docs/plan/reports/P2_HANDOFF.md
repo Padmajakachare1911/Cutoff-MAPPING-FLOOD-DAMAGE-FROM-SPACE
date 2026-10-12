@@ -39,6 +39,13 @@ This file is kept current after every P2 task, so another agent can continue at 
 - Tars are ordered by event: tar 00000 = event 1111009, tar 00017 = event 497.
 - Approach: Range-probe each tar every 256 MB, binary-search key boundaries to 8 MB, and write `configs/kuro_grd_segments.json`; `fetch` then streams only the needed segments.
 
+## Download status and gotchas (P2.1)
+- The index is done and committed: `configs/kuro_grd_segments.json` (143 segments, ~104 GB of labelled raw bytes).
+- **Event 514 (val) was not found** in the GeoTIFF tars at 8 MB resolution, so validation uses 6 events. All 10 test and 27 train events are present.
+- The user's connection is about **3.4 MB/s**. Parallel streams don't help (network-bound). The order is val → train → test, so training can start before test finishes. Test is capped at 1000 samples per event.
+- The HF CDN **drops long streams** after ~100–250 MB. The fetcher therefore requests 96 MB ranges, continues from the next real tar header, and records per-segment offsets in `C:\cutoff_data\kuro\progress.json`. A restart never re-downloads finished bytes.
+- Rerunning `python scripts/fetch_kuro_subset.py fetch --jobs 4 --splits val train test --test-per-event 1000` is always safe (resumes).
+
 ## How to resume P2.1
 1. If `configs/kuro_grd_segments.json` is missing: `python scripts/fetch_kuro_subset.py index` (~10–20 min).
 2. `python scripts/fetch_kuro_subset.py fetch --dry-run` shows raw GB per event. Then run `fetch` (resumable; samples already in `C:\cutoff_data\kuro\index.csv` are skipped). Quotas: val 700/event, test 1500/event, train 450/event (≥ 50 % with flood).
