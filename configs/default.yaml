@@ -47,7 +47,7 @@ rules:                              # FROZEN
   k_sigma: 3.0
   hand_corridor_m: 60
   hand_stable_m: 100
-  stable_strata: 3                  # sigma estimated per pre-event VV tercile (D9)
+  stable_strata: 1                  # D9: one scene-wide robust sigma (3 = per pre-VV tercile, option)
   min_component_px: 20
 
 gating:                             # FROZEN
