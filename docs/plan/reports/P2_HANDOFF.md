@@ -15,15 +15,15 @@ This file is kept current after every P2 task, so another agent can continue at 
 |---|---|---|---|
 | P2.1 Kuro Siwo subset | **code done; index running; fetch not started** | `src/cutoff/data/kuro_siwo.py`, `scripts/fetch_kuro_subset.py`, `tests/test_p2_kuro_index.py` | see "Kuro Siwo facts" below |
 | P2.2 SAR input builder | done | `src/cutoff/geo/sar.py`, `tests/test_p2_sar.py` | D5 NaN-safe dB, linear pre-mean, D6 slope clip |
-| P2.3 Dataset + stats + QA | **todo** | `src/cutoff/data/kuro_siwo.py` (add `KuroSiwoDataset`) | needs fetched npz |
-| P2.4 Model/loss/train/calibrate | **partly**: `ml/model.py` done (build/save/load + meta contract) | `ml/losses.py`, `ml/metrics.py`, `ml/train.py`, `ml/calibrate.py`, `configs/train_unet.yaml` todo | train locally on the RTX 4050 (batch 8–16, AMP) |
+| P2.3 Dataset + stats | **code done** (merged PR #2); QA plot todo once data exists | `data/kuro_siwo.py` (`sample_to_input`, `KuroSiwoDataset`, `compute_channel_stats`) | slope uses ground spacing 10·cos(lat) m (EPSG:3857 patches) |
+| P2.4 Model/loss/train/calibrate | **code done** (merged PR #2); **training not run yet** | `ml/{model,losses,metrics,calibrate,train}.py`, `configs/train_unet.yaml` | run: `python -m cutoff.ml.train --name p7` (then `b3_no_slope`, `b2_post_only`); outputs in `C:\cutoff_data\runs\<name>\<name>.pt`; `--resume` after an interruption |
 | P2.5 b0 + stage_model | done | `ml/baselines.py`, `ml/infer.py`, `geo/raster_io.py`, `tests/test_p2_infer.py` | Otsu tie-break = middle of the plateau |
 | P2.6 B1 SNUNet | todo (optional, time box 2 h) | | |
 | P2.7 disturbance | done | `geo/change.py` | D9 final: strata=1, fallback chain for lowland AOIs |
 | P2.8 gating | done | `geo/gating.py` | exact truth table in `05_contracts.md` §2 |
 | P2.9 vectorise | done | `geo/vectorize.py` | empty hazard writes an empty Polygon layer |
 | P2.10 τ/T + freeze checkpoint | todo | | validation events only |
-| P2.11 E1/E2/E3/E8 | todo | `eval/kuro_eval.py` | |
+| P2.11 E1/E2/E3/E8 | **harness done** (PR #3); not run yet | `eval/kuro_eval.py` | `python eval/kuro_eval.py --split test --models b0 <ckpts...>` → `docs/results/kuro_test.{md,json}`; `--split val --calibration` for E8 |
 
 ## Kuro Siwo facts discovered (verified 2026-10-12, P2.1)
 - HF `orion-ai-lab/Kuro-Siwo-GeoTIFFs`, folder `GRD/`: **35 tars × ~20 GB = 699 GB**, PAX headers, HTTP Range supported (CDN `us.aws.cdn.hf.co`), about 2–3 s per probe.
