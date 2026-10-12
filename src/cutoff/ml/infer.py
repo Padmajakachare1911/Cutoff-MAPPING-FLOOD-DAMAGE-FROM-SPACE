@@ -92,8 +92,11 @@ def stage_model(ctx: RunContext) -> dict:
         mean = np.asarray(meta["mean"], np.float32)[:, None, None]
         std = np.asarray(meta["std"], np.float32)[:, None, None]
         xn = (x - mean) / (std + 1e-6)
-        if not meta.get("use_slope", True):
-            xn[6] = np.where(np.isfinite(xn[6]), 0.0, np.nan)  # slope ablation: channel held at its mean
+        zero = list(meta.get("zero_channels", [])) or ([] if meta.get("use_slope", True) else [6])
+        if 6 not in zero:
+            xn[6] = np.nan_to_num(xn[6], nan=0.0)   # missing slope (no DEM) -> training mean, as in training
+        for c in zero:                              # ablation channels held at their training mean, as in training
+            xn[c] = np.where(np.isfinite(xn[c]), 0.0, np.nan) if c < 6 else 0.0
         cfg = ctx.cfg.get("model", {})
         probs = predict_proba(model, xn, tile=cfg.get("tile", 224), overlap=cfg.get("overlap", 64),
                               temperature=meta["temperature"], batch=cfg.get("batch", 8), device=device)

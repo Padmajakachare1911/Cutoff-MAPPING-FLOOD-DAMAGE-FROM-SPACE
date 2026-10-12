@@ -172,6 +172,106 @@ def load_sample(path: str | Path) -> dict:
     return out
 
 
+# --------------------------------------------------------------------------- model input + dataset (P2.3)
+NOMINAL_PIXEL_M = 10.0   # Kuro Siwo patches: 10 m spacing in EPSG:3857 units
+
+
+def sample_to_input(rec: dict) -> np.ndarray:
+    """Stored sample -> unnormalised (7, H, W) model input via the SAME builder as inference.
+
+    Web Mercator stretches distances by 1/cos(lat): a nominal 10 m pixel is 10*cos(lat) m on the
+    ground, so slope uses the true ground spacing (otherwise slope is under-estimated)."""
+    from cutoff.geo.sar import build_input_stack, pre_mean_linear
+
+    f = lambda k: rec[k].astype(np.float32)
+    pre = pre_mean_linear(np.stack([np.stack([f("vv_pre1"), f("vh_pre1")]), np.stack([f("vv_pre2"), f("vh_pre2")])]))
+    post = np.stack([f("vv_post"), f("vh_post")])
+    lat = float(rec.get("meta", {}).get("lat", 0.0))
+    px = NOMINAL_PIXEL_M * max(math.cos(math.radians(lat)), 0.05)
+    dem = rec["dem"].astype(np.float32)
+    if np.isfinite(dem).any():
+        gy, gx = np.gradient(dem, px)
+        slope = np.degrees(np.arctan(np.hypot(gx, gy))).astype(np.float32)
+    else:
+        slope = np.full(dem.shape, np.nan, np.float32)
+    return build_input_stack(pre, post, slope)
+
+
+class KuroSiwoDataset:
+    """torch-style dataset over the local npz store written by scripts/fetch_kuro_subset.py.
+
+    Returns x float32 (7, 224, 224) normalised (NaN -> 0 after normalisation; `zero_channels` held
+    at 0 = their training mean, used for ablations) and y int64 (224, 224), IGNORE_INDEX where the
+    valid mask is 0 or any SAR channel is missing. Augmentation (train only): a radiometric gain of
+    +-1 dB applied to pre AND post (so the change channels keep their meaning) + Gaussian noise
+    (sigma 0.05 in normalised units) on SAR channels. No geometric flips (they mirror look geometry;
+    E3 ablation only)."""
+
+    def __init__(self, root, split: str, mean, std, augment: bool = False, seed: int = 0,
+                 zero_channels=(), index_csv: str = "index.csv", events=None, flips: bool = False):
+        import csv
+
+        self.root = Path(root)
+        rows = list(csv.DictReader((self.root / index_csv).open()))
+        keep = set(map(str, events)) if events is not None else None
+        self.rows = [r for r in rows if r["split"] == split and (keep is None or r["event"] in keep)]
+        if not self.rows:
+            raise ValueError(f"no samples for split={split} under {self.root}")
+        self.events = sorted({r["event"] for r in self.rows}, key=lambda e: (len(e), e))
+        self.mean = np.asarray(mean, np.float32)[:, None, None]
+        self.std = np.asarray(std, np.float32)[:, None, None]
+        self.augment, self.flips = augment, flips
+        self.zero = [int(c) for c in zero_channels]
+        self.rng = np.random.default_rng(seed)
+
+    def __len__(self) -> int:
+        return len(self.rows)
+
+    def raw(self, i: int) -> tuple[np.ndarray, np.ndarray]:
+        from cutoff.contracts import IGNORE_INDEX
+
+        rec = load_sample(self.root / self.rows[i]["path"])
+        x = sample_to_input(rec)
+        y = rec["mask"].astype(np.int64)
+        y[(rec["valid"] == 0) | ~np.isfinite(x[:6]).all(axis=0)] = IGNORE_INDEX
+        return x, y
+
+    def __getitem__(self, i: int):
+        import torch
+
+        x, y = self.raw(i)
+        if self.augment:
+            x[:4] += self.rng.uniform(-1.0, 1.0)                    # same dB gain on pre and post
+        x = (x - self.mean) / (self.std + 1e-6)
+        if self.augment:
+            x[:6] += self.rng.normal(0, 0.05, size=x[:6].shape).astype(np.float32)
+            if self.flips and self.rng.random() < 0.5:
+                x, y = x[:, :, ::-1], y[:, ::-1]
+        x = np.nan_to_num(x, nan=0.0, posinf=0.0, neginf=0.0)
+        for c in self.zero:
+            x[c] = 0.0
+        return torch.from_numpy(np.ascontiguousarray(x, np.float32)), torch.from_numpy(np.ascontiguousarray(y))
+
+
+def compute_channel_stats(ds: KuroSiwoDataset, max_samples: int = 2000, seed: int = 0):
+    """Per-channel mean/std over valid pixels of TRAINING samples (unnormalised dB / degrees)."""
+    from cutoff.contracts import IGNORE_INDEX
+
+    rng = np.random.default_rng(seed)
+    idx = rng.choice(len(ds), size=min(max_samples, len(ds)), replace=False)
+    s = np.zeros(7); ss = np.zeros(7); n = np.zeros(7)
+    for i in idx:
+        x, y = ds.raw(int(i))
+        v = y != IGNORE_INDEX
+        for c in range(7):
+            xc = x[c][v & np.isfinite(x[c])].astype(np.float64)
+            s[c] += xc.sum(); ss[c] += (xc ** 2).sum(); n[c] += xc.size
+    n = np.maximum(n, 1)
+    mean = s / n
+    std = np.sqrt(np.maximum(ss / n - mean ** 2, 1e-6))
+    return mean.astype(np.float32), std.astype(np.float32)
+
+
 # --------------------------------------------------------------------------- geography
 def km_between(lon1, lat1, lon2, lat2) -> float:
     p1, p2 = math.radians(lat1), math.radians(lat2)
