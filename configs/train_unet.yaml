@@ -17,6 +17,7 @@ base:
   flips: false              # geometric flips mirror look geometry; ablation only
   zero_channels: []         # channels held at their training mean (ablations)
   max_stat_samples: 2000
+  index_csv: index_full.csv # frozen train+val snapshot (all 27 train events, 9114 samples; val 6 events, 1145)
 variants:
   p7: {zero_channels: []}                        # 7 channels: pre, post, diff, slope (clipped 0-15 deg)
   p7_early: {index_csv: index_early.csv}          # integration model on a ~60 % snapshot; the final p7 retrains on 100 %
@@ -25,3 +26,4 @@ variants:
   b2_post_only: {zero_channels: [0, 1, 4, 5, 6]}  # H1: post VV/VH only
   p7_flips: {flips: true}                         # E3 ablation
   p7_seed7: {seed: 7}
+  b3_no_slope_seed7: {zero_channels: [6], seed: 7}  # seed variance of the final model (evidence only; v1 stays seed 42)
