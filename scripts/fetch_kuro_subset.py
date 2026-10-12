@@ -226,8 +226,11 @@ def cmd_fetch(args):
                 if err is not None:
                     tries += 1
                     print(f"   retry {tries} ({split}/{ev}) after {type(err).__name__}: {err}", flush=True)
-                    start = (max(resume_at - 4096, seg["start"]) // 512) * 512
                     time.sleep(2 ** tries)
+                    # resume at the next REAL tar header after the last good sample (an arbitrary
+                    # 512-aligned offset is usually inside file data -> "invalid header")
+                    hit = probe(url, max(resume_at, seg["start"]))
+                    start = hit[0] if hit else None
                 else:
                     start = None
         with lock:
