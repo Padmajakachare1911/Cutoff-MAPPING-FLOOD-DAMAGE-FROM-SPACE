@@ -93,16 +93,22 @@ def evaluate(ds, model_spec: str, device: str = "cpu", tau: float | None = None)
 
 
 def calibration(ds, ckpt: str, device: str = "cpu") -> dict:
-    """E8: ECE of the predicted class at T = 1 and at the checkpoint's fitted T (validation events)."""
+    """E8 on validation events, at T = 1 and at the checkpoint's fitted T:
+    - all-class ECE of the predicted class (dominated by easy 'no water' pixels, so near 0);
+    - flood ECE: is p(flood) = 0.8 really flood 80 % of the time? (the meaningful one for responders),
+      computed over pixels where the model gives p(flood) >= 0.05 or that are flood."""
     from cutoff.ml.model import load_checkpoint
     T = load_checkpoint(ckpt)[1]["temperature"]
-    out = {}
-    for label, t in (("T=1", 1.0), (f"T={T:.3f}", T)):
-        conf, corr = [], []
+    out = {"T": T}
+    for label, t in (("T=1", 1.0), ("fitted T", T)):
+        conf, corr, pf, isf = [], [], [], []
         for _, p, y, _ in _iter_ckpt(ds, ckpt, device, T_override=t):
             v = y != IGNORE_INDEX
             conf.append(p.max(0)[v][::16]); corr.append((p.argmax(0) == y)[v][::16])
-        out[label] = expected_calibration_error(np.concatenate(conf), np.concatenate(corr))
+            rel = v & ((p[2] >= 0.05) | (y == 2))
+            pf.append(p[2][rel][::4]); isf.append((y == 2)[rel][::4])
+        out[f"all-class ECE, {label}"] = expected_calibration_error(np.concatenate(conf), np.concatenate(corr))
+        out[f"flood ECE, {label}"] = expected_calibration_error(np.concatenate(pf), np.concatenate(isf))
     return {"name": Path(ckpt).stem, "ece": out}
 
 
@@ -135,8 +141,9 @@ def to_markdown(results: list[dict], calib: list[dict] | None = None) -> str:
             cells.append(f"{_fmt(s['iou'])} ({s['support_px']})" if s else "-")
         lines.append(f"| {lab} | " + " | ".join(cells) + " |")
     if calib:
-        lines += ["", "## E8 - expected calibration error (validation events)", "", "| model | " +
-                  " | ".join(calib[0]["ece"]) + " |", "|---|---|---|"]
+        cols = list(calib[0]["ece"])
+        lines += ["", "## E8 - expected calibration error (validation events; T = each model's fitted temperature)", "",
+                  "| model | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
         for c in calib:
             lines.append(f"| {c['name']} | " + " | ".join(_fmt(v) for v in c["ece"].values()) + " |")
     return "\n".join(lines) + "\n"
@@ -154,7 +161,8 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     ds = KuroSiwoDataset(a.data, a.split, np.zeros(7), np.ones(7))
     results = [evaluate(ds, m, device) for m in a.models]
-    calib = [calibration(ds, m, device) for m in a.models if m != "b0"] if a.calibration else None
+    calib = ([calibration(ds, m, device) for m in a.models if m != "b0" and not m.startswith("b1:")]
+             if a.calibration else None)                     # E8 applies to our checkpoints only
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     tag = f"kuro_{a.split}"
     (out / f"{tag}.json").write_text(json.dumps({"results": results, "calibration": calib}, default=float, indent=1))
