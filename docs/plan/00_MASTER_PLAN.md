@@ -41,7 +41,7 @@ The cross-team contracts are implemented and tested, so the four streams can sta
 | D6 | Slope channel clipped to 0–15° before normalisation; E3 also tests a 6-channel model with no slope. | Kuro Siwo is lowland-heavy, so Himalayan slopes are out-of-distribution inputs. |
 | D7 | Settlements = OSM places **plus** clusters of ≥5 OSM buildings. | Many Rasuwa villages have no place node, which would make "unknown" the dominant status. |
 | D8 | A bridge is closed only if high-confidence hazard reaches its **approaches** (25 m around each end), not mid-span. | Every flooded river intersects every bridge. |
-| D9 | Disturbance σ is estimated per pre-event VV tercile on stable terrain, plus a minimum component size of 20 px. | A single hillside σ under-estimates valley-floor variability. |
+| D9 | Disturbance: **one scene-wide robust σ** (1.4826·MAD) from stable terrain, plus a minimum component size of 20 px. If an AOI has no HAND > 100 m terrain, fall back to HAND > 60 m, then to all valid pixels (with a warning). Per-pre-VV-tercile σ remains an option (`rules.stable_strata`). | Split-based change-detection literature (Bovolo & Bruzzone 2007; Martinis et al. 2009) recommends one consistent scene threshold, and the debris rule has no labels to justify extra complexity. The fallback keeps lowland judge AOIs from crashing. |
 | D10 | Graph = `networkx.MultiGraph` keyed by segment id; ways are split per way at intersections, which preserves attributes. | The blueprint's `nx.Graph` dropped parallel edges, and its `covers` query ran in the wrong direction. |
 | D11 | `s2_clear` excludes snow (SCL 11). | MNDWI is unreliable on snow. |
 | D12 | PDF: WeasyPrint, with xhtml2pdf as fallback. | WeasyPrint needs pango/cairo, which Windows lacks. |
