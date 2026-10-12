@@ -51,11 +51,30 @@ def _iter_ckpt(ds_raw, ckpt, device, T_override=None):
             yield i, p, y.numpy(), ds_raw.raw(i)[0][6]
 
 
+def _iter_b1(ds, path, order, device):
+    from b1_snunet import load_snunet, snunet_proba
+
+    from cutoff.data.kuro_siwo import load_sample
+    model = load_snunet(path, device)
+    for i in range(len(ds)):
+        x, y = ds.raw(i)
+        rec = load_sample(ds.root / ds.rows[i]["path"])
+        yield i, snunet_proba(model, rec, order, device), y, x[6]
+
+
 def evaluate(ds, model_spec: str, device: str = "cpu", tau: float | None = None) -> dict:
-    """Return {"name", "tau", "pooled", "per_event": [...], "strata": [...]} for one model."""
+    """Return {"name", "tau", "pooled", "per_event": [...], "strata": [...]} for one model.
+
+    model_spec: "b0" | "b1:<snunet weights>[:pre_post|post_pre]" | <Cutoff checkpoint path>."""
     from cutoff.ml.model import load_checkpoint
     if model_spec == "b0":
         it, name, tau = _iter_b0(ds), "b0", 0.5 if tau is None else tau
+    elif model_spec.startswith("b1:"):
+        rest = model_spec[3:]
+        order = "pre_post"
+        if rest.endswith((":pre_post", ":post_pre")):
+            rest, order = rest.rsplit(":", 1)
+        it, name, tau = _iter_b1(ds, rest, order, device), f"b1_snunet_{order}", 0.5 if tau is None else tau
     else:
         meta = load_checkpoint(model_spec)[1]
         it, name = _iter_ckpt(ds, model_spec, device), Path(model_spec).stem

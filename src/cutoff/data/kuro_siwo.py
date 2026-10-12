@@ -234,7 +234,8 @@ class KuroSiwoDataset:
         rec = load_sample(self.root / self.rows[i]["path"])
         x = sample_to_input(rec)
         y = rec["mask"].astype(np.int64)
-        y[(rec["valid"] == 0) | ~np.isfinite(x[:6]).all(axis=0)] = IGNORE_INDEX
+        # Kuro Siwo label 3 = unannotated: its own trainers use ignore_index=3 (verified in their code)
+        y[(y > 2) | (rec["valid"] == 0) | ~np.isfinite(x[:6]).all(axis=0)] = IGNORE_INDEX
         return x, y
 
     def __getitem__(self, i: int):
