@@ -19,7 +19,8 @@ base:
   max_stat_samples: 2000
 variants:
   p7: {zero_channels: []}
-  p7_early: {index_csv: index_early.csv}          # integration model on a ~60 % snapshot; the final p7 retrains on 100 %                         # 7 channels: pre, post, diff, slope (clipped 0-15 deg)
+  p7_early: {index_csv: index_early.csv}          # integration model on a ~60 % snapshot; the final p7 retrains on 100 %
+  b3_no_slope_early: {index_csv: index_early.csv, zero_channels: [6]}   # early D6 evidence on the same snapshot                         # 7 channels: pre, post, diff, slope (clipped 0-15 deg)
   b3_no_slope: {zero_channels: [6]}               # D6 ablation: no slope
   b2_post_only: {zero_channels: [0, 1, 4, 5, 6]}  # H1: post VV/VH only
   p7_flips: {flips: true}                         # E3 ablation
