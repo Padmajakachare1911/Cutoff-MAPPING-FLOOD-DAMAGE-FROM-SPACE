@@ -18,7 +18,7 @@ from typing import Callable
 import numpy as np
 import requests
 
-from cutoff.data.cdse import Scene, iso
+from cutoff.data.cdse import Scene, iso, parse_dt, search_items
 from cutoff.geo.grid import Grid
 
 MAX_PX = 2500
@@ -196,3 +196,57 @@ def s2_request_body(day_from: datetime, day_to: datetime, chunk: Grid, evalscrip
         "output": _output_block(chunk),
         "evalscript": evalscript,
     }
+
+
+def coarse_grid(grid: Grid, res: float) -> Grid:
+    """Same origin and extent (rounded up) at a coarser resolution, e.g. 20 m for the cheap SCL probe."""
+    a = grid.affine
+    f = res / a.a
+    return Grid(epsg=grid.epsg, transform=(res, 0.0, a.c, 0.0, -res, a.f),
+                width=int(np.ceil(grid.width / f)), height=int(np.ceil(grid.height / f)))
+
+
+def fetch_s2_best(grid, around: datetime, days: int, cfg, after: datetime | None = None, max_px: int = MAX_PX,
+                  log: Callable | None = None, credentials: tuple[str, str] | None = None
+                  ) -> tuple[np.ndarray, str] | None:
+    """Best Sentinel-2 L2A date within +-days of `around` (and strictly after `after`, the event), by the
+    number of clear AOI pixels in a cheap 20 m SCL probe. Returns ((4, H, W) float32 B03, B11 reflectance,
+    SCL, dataMask on the grid; the chosen date's item ids joined by ","), or None without candidates."""
+    s2 = cfg.get("s2", {})
+    clear_scl = np.asarray(s2.get("clear_scl", [4, 5, 6, 7]))
+    lo, hi = around - timedelta(days=days), around + timedelta(days=days)
+    if after is not None:
+        lo = max(lo, after + timedelta(seconds=1))
+    if lo >= hi:
+        return None
+    items = search_items(grid.bounds_wgs84(), lo, hi, cfg["s1"]["stac_url"], collection=s2.get("collection",
+                                                                                                "sentinel-2-l2a"))
+    by_day: dict[str, list[dict]] = {}
+    for it in items:
+        dt = parse_dt(it["properties"]["datetime"])
+        if lo <= dt <= hi:
+            by_day.setdefault(dt.date().isoformat(), []).append(it)
+    if not by_day:
+        return None
+    creds = credentials or sh_credentials()
+
+    def window(day: str) -> tuple[datetime, datetime]:
+        d0 = datetime.fromisoformat(day).replace(tzinfo=around.tzinfo)
+        return max(d0, lo), min(d0 + timedelta(days=1), hi)
+
+    probe = coarse_grid(grid, 20.0)
+    scores = []
+    for day in sorted(by_day):
+        f, t = window(day)
+        arr = _fetch_tiled(probe, 2, lambda ch: s2_request_body(f, t, ch, S2_SCL_EVALSCRIPT), cfg, max_px, log,
+                           creds, f"S2 SCL {day}")
+        n_clear = int((np.isin(arr[0], clear_scl) & (arr[1] > 0)).sum())
+        gap = abs((datetime.fromisoformat(day).replace(tzinfo=around.tzinfo) - around).total_seconds())
+        scores.append((-n_clear, gap, day))
+        if log:
+            log(event="s2_probe", day=day, clear_px_20m=n_clear, of=probe.width * probe.height)
+    _, _, best = min(scores)
+    f, t = window(best)
+    arr = _fetch_tiled(grid, 4, lambda ch: s2_request_body(f, t, ch, S2_EVALSCRIPT), cfg, max_px, log, creds,
+                       f"S2 {best}")
+    return arr, ",".join(sorted(it["id"] for it in by_day[best]))
