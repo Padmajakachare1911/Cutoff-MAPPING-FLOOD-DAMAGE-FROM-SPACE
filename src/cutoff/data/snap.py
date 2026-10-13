@@ -21,6 +21,7 @@ import numpy as np
 import requests
 
 from cutoff.data.cdse import Scene
+from cutoff.data.s1_acquire import _tmp_path
 from cutoff.geo.grid import Grid
 
 GRAPH = Path(__file__).resolve().parents[3] / "graphs" / "s1_cutoff.xml"
@@ -51,15 +52,16 @@ def find_gpt() -> str:
 
 def cdse_token(cfg: dict | None = None) -> str:
     """Access token for the CDSE download service (password grant, public client `cdse-public`)."""
-    from cutoff.data.sentinelhub import env
+    from cutoff.data import sentinelhub
 
+    env = sentinelhub.env
     user, pwd = env("CDSE_USERNAME"), env("CDSE_PASSWORD")
     if not (user and pwd):
         raise MissingCDSELogin("CDSE login missing: set CDSE_USERNAME and CDSE_PASSWORD in .env")
     url = ((cfg or {}).get("s1", {}).get("sentinelhub", {}).get("token_url")) or CDSE_TOKEN_URL
     r = requests.post(url, data={"grant_type": "password", "client_id": "cdse-public", "username": user,
                                  "password": pwd}, timeout=60)
-    r.raise_for_status()
+    sentinelhub.raise_for_login(r, "CDSE login (CDSE_USERNAME / CDSE_PASSWORD)")
     return r.json()["access_token"]
 
 
@@ -70,7 +72,7 @@ def download_product(scene: Scene, dest: Path, cfg: dict, log: Callable | None =
     if not scene.product_uuid:
         raise ValueError(f"{scene.id}: no product uuid in the STAC item (properties._private.product_uuid)")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(".part")
+    tmp = _tmp_path(dest)
     t0 = time.time()
     url = ODATA_URL.format(uuid=scene.product_uuid)
     with requests.get(url, headers={"Authorization": f"Bearer {cdse_token(cfg)}"}, stream=True, timeout=600) as r:
@@ -161,3 +163,44 @@ def backend_consistency(a_lin, b_lin, hand, slope, shadow, hand_min: float = 100
                     "median_abs_ddb": float(np.median(d)) if d.size else None,
                     "p90_abs_ddb": float(np.percentile(d, 90)) if d.size else None}
     return out
+
+
+# --------------------------------------------------------------------------- gpt -h check (P1.7 [U] item)
+def check_gpt_params(gpt: str | None = None, run: Callable = subprocess.run) -> dict:
+    """Run `gpt <operator> -h` for every operator in graphs/s1_cutoff.xml and check that each parameter the
+    graph sets is a known `-P<name>=` option of the installed SNAP. Returns {"ok", "gpt", "operators": {op:
+    {"missing": [...], "error": str | None}}}."""
+    import re
+    import xml.etree.ElementTree as ET
+
+    gpt = gpt or find_gpt()
+    report = {"ok": True, "gpt": gpt, "operators": {}}
+    for node in ET.parse(GRAPH).getroot().findall("node"):
+        op = node.find("operator").text
+        if op in ("Read", "Write"):
+            continue
+        wanted = [c.tag for c in node.find("parameters")]
+        r = run([gpt, op, "-h"], capture_output=True, text=True)
+        text = (r.stdout or "") + (r.stderr or "")
+        known = set(re.findall(r"-P(\w+)=", text))
+        entry = {"missing": [p for p in wanted if p not in known], "error": None}
+        if r.returncode != 0 or not known:
+            entry["error"] = text.strip()[-500:] or f"gpt {op} -h exited {r.returncode}"
+        report["operators"][op] = entry
+        report["ok"] &= not entry["missing"] and entry["error"] is None
+    return report
+
+
+if __name__ == "__main__":
+    import json
+    import sys
+
+    if "--check-gpt" in sys.argv:
+        try:
+            rep = check_gpt_params()
+        except SnapNotFound as e:
+            print(e)
+            raise SystemExit(2)
+        print(json.dumps(rep, indent=1))
+        raise SystemExit(0 if rep["ok"] else 1)
+    print("usage: python -m cutoff.data.snap --check-gpt")

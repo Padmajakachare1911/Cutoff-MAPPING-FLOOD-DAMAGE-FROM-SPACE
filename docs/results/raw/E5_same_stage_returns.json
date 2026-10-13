@@ -1,0 +1,79 @@
+{
+ "name": "e5_same",
+ "bbox": [
+  85.28,
+  28.1,
+  85.42,
+  28.29
+ ],
+ "event": "2026-08-26T02:52:00Z",
+ "mode": "fast",
+ "returns": {
+  "s1": {
+   "s1_backend": "sentinelhub",
+   "rel_orbit": 85,
+   "orbit_direction": "ascending",
+   "s1_post": {
+    "id": "S1D_IW_GRDH_1SDV_20260828T122141_20260828T122206_004326_007FA4_C73B_COG",
+    "datetime": "2026-08-28T12:21:41.762029Z",
+    "platform": "sentinel-1d"
+   },
+   "s1_pre": [
+    {
+     "id": "S1D_IW_GRDH_1SDV_20260816T122141_20260816T122206_004151_007980_B091_COG",
+     "datetime": "2026-08-16T12:21:41.058298Z",
+     "platform": "sentinel-1d"
+    },
+    {
+     "id": "S1D_IW_GRDH_1SDV_20260804T122140_20260804T122205_003976_00737A_38EB_COG",
+     "datetime": "2026-08-04T12:21:40.493161Z",
+     "platform": "sentinel-1d"
+    },
+    {
+     "id": "S1D_IW_GRDH_1SDV_20260723T122140_20260723T122205_003801_006D5D_2C7A_COG",
+     "datetime": "2026-07-23T12:21:40.113411Z",
+     "platform": "sentinel-1d"
+    }
+   ],
+   "post_lag_hours": 57.495
+  },
+  "terrain": {
+   "dem_tiles": [
+    "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N28_00_E085_00_DEM/Copernicus_DSM_COG_10_N28_00_E085_00_DEM.tif"
+   ],
+   "hand_stream_upa_km2": 1.0
+  },
+  "model": {
+   "model_version": "cutoff_unet_v1.pt",
+   "flood_threshold": 0.5,
+   "temperature": 1.0365309715270996
+  },
+  "disturbance": {
+   "sigma_stable_db": 1.312371015548706,
+   "k_sigma": 3.0,
+   "n_stable_px": 2546000
+  },
+  "gating": {
+   "stable_steep_fpr": 2.131747086114908e-06
+  },
+  "vectorize": {
+   "area_km2_by_class": {
+    "flood_high": 0.0,
+    "flood_possible": 0.0049,
+    "rule_decrease": 0.1643,
+    "rule_increase": 0.0764,
+    "permanent_water": 9.7663
+   },
+   "no_observation_km2": 1.5853
+  }
+ },
+ "timings": {
+  "s1": 31.0,
+  "terrain": 13.1,
+  "model": 11.4,
+  "disturbance": 0.6,
+  "gating": 0.6,
+  "vectorize": 1.0
+ },
+ "warnings": []
+}

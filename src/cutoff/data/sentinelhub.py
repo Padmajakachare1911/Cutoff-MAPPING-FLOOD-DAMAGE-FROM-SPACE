@@ -38,6 +38,22 @@ class MissingCredentials(RuntimeError):
     pass
 
 
+class LoginRejected(RuntimeError):
+    """The CDSE identity server refused the credentials (the message carries its reason, never the secret)."""
+
+
+def raise_for_login(r, what: str) -> None:
+    """Raise LoginRejected with the server's error code/description for a failed token request."""
+    if r.status_code == 200:
+        return
+    try:
+        j = r.json() if "json" in (r.headers.get("content-type") or "") else {}
+    except ValueError:
+        j = {}
+    raise LoginRejected(f"{what} rejected by CDSE (HTTP {r.status_code}): {j.get('error', 'error')} - "
+                        f"{j.get('error_description', '')}".rstrip(" -"))
+
+
 def _read_env_files() -> dict[str, str]:
     vals: dict[str, str] = {}
     for p in _ENV_FILES:
@@ -70,7 +86,7 @@ def get_token(client_id, client_secret, token_url) -> str:            # cache un
         return tok[0]
     r = requests.post(token_url, data={"grant_type": "client_credentials", "client_id": client_id,
                                        "client_secret": client_secret}, timeout=60)
-    r.raise_for_status()
+    raise_for_login(r, "Sentinel Hub OAuth client (SH_CLIENT_ID / SH_CLIENT_SECRET)")
     d = r.json()
     _TOKENS[key] = (d["access_token"], time.time() + float(d.get("expires_in", 300)) - 60.0)
     return d["access_token"]

@@ -154,3 +154,19 @@ def test_live_trishuli_post_chunk(post_scene):
     assert dm.mean() > 0.5
     assert 0.01 <= float(np.median(vv[dm & (vv > 0)])) <= 0.3
     assert ((lia[dm] >= 0) & (lia[dm] <= 90)).mean() > 0.9
+
+
+def test_rejected_login_reports_server_reason_without_secret(monkeypatch):
+    sh._TOKENS.clear()
+
+    class Resp:
+        status_code = 401
+        headers = {"content-type": "application/json"}
+
+        def json(self):
+            return {"error": "invalid_client", "error_description": "Invalid client or Invalid client credentials"}
+
+    monkeypatch.setattr(sh.requests, "post", lambda *a, **k: Resp())
+    with pytest.raises(sh.LoginRejected, match="invalid_client.*Invalid client credentials") as ei:
+        sh.get_token("my-id", "TOP-SECRET", "https://x/token")
+    assert "TOP-SECRET" not in str(ei.value)

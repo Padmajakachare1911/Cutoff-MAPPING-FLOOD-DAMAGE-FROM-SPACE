@@ -1,0 +1,22 @@
+{
+ "n_stable_px": 200506,
+ "hand_min_m": 100.0,
+ "slope_max_deg": 20.0,
+ "VV": {
+  "n_px": 199867,
+  "median_abs_ddb": 0.5881195068359375,
+  "p90_abs_ddb": 1.7524452209472656,
+  "median_signed_ddb_fast_minus_snap": -0.1986064910888672
+ },
+ "VH": {
+  "n_px": 199867,
+  "median_abs_ddb": 0.5808820724487305,
+  "p90_abs_ddb": 1.7244023084640503,
+  "median_signed_ddb_fast_minus_snap": -0.19381237030029297
+ },
+ "valid_both_frac": 0.9883,
+ "LIA_abs_diff_deg": {
+  "median": 0.3389015197753906,
+  "p90": 1.1688385009765625
+ }
+}
