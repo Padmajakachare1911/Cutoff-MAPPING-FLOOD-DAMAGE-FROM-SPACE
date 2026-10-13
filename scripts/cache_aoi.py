@@ -31,6 +31,12 @@ STAGES = {
     "s1": ("cutoff.data.s1_acquire", "stage_s1", ["s1_pre_mean", "s1_post", "lia", "shadow_layover"]),
     "terrain": ("cutoff.data.dem", "stage_terrain", ["dem", "slope", "hand", "flwdir"]),
     "s2": ("cutoff.data.s2", "stage_s2", ["s2_water", "s2_clear"]),
+    # P2 stages, called through their public stage functions - only for P1's experiments E5 / E3c
+    # (flood area, stable_steep_fpr, backend IoU) until P4's pipeline.run exists. Not used for caching.
+    "model": ("cutoff.ml.infer", "stage_model", ["p_model"]),
+    "disturbance": ("cutoff.geo.change", "stage_disturbance", ["disturb"]),
+    "gating": ("cutoff.geo.gating", "stage_gating", ["hazard_class", "flags"]),
+    "vectorize": ("cutoff.geo.vectorize", "stage_vectorize", ["hazard"]),
 }
 OPTIONAL = {"s2"}
 
@@ -52,6 +58,7 @@ def main(argv=None) -> int:
     ap.add_argument("--mode", default="fast", choices=["fast", "full", "cached"])
     ap.add_argument("--stages", default="s1,terrain,s2")
     ap.add_argument("--allow-cross-track", action="store_true", help="experiment E5 only")
+    ap.add_argument("--model", default="b0", help="checkpoint path or b0 (only for the model stage)")
     ap.add_argument("--config", default=str(ROOT / "configs" / "default.yaml"))
     ap.add_argument("--out", default=None, help="run folder (default <cache_dir>/<name>)")
     a = ap.parse_args(argv)
@@ -66,7 +73,7 @@ def main(argv=None) -> int:
     grid.to_json(run / "grid.json")
     ctx = RunContext(run_dir=run, run_id=a.name, aoi_bbox=bbox, event_datetime=parse_event(a.event),
                      osm_snapshot=cfg.get("osm", {}).get("snapshot", DEFAULT_OSM_SNAPSHOT), mode=a.mode,
-                     cfg=cfg, grid=grid)
+                     cfg=cfg, grid=grid, model_path=a.model)
     returns, status = {}, 0
     for name in a.stages.split(","):
         mod, fn, keys = STAGES[name]
