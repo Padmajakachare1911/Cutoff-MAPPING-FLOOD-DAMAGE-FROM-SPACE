@@ -5,6 +5,95 @@ Newest first. Status lines and hand-offs are in `P1_HANDOFF.md`.
 
 ---
 
+## 2026-10-13 (night) — E3c downstream finished, temp-file collision fixed (branch `p1/P1.8-real-runs`)
+
+### U10 — per-process temp files for every cache write
+- **What:** `s1_acquire._tmp_path(path)` → `<name>.<pid>.tmp`, used by the S1 scene cache, the DEM cache (`dem.py`) and
+  the SNAP product download (`snap.py`, which replaces `.part`). Each file is written under that name, then atomically
+  renamed.
+- **Why:** the first full-mode run failed on scene 2026-08-04 with `Deleting ...a06dbf65848b.snap.tmp.tif failed:
+  Permission denied`. File timestamps show a **second run of the same job** overlapping it after the previous session
+  ended: it finished 07-23 at 20:42 after the logged failure at 20:27. Both used the same fixed temp name. On Windows
+  the loser could not delete the winner's open file. Its origin could not be determined from the machine (no Python or
+  Java process was left).
+  - The data was not corrupted: the atomic renames meant the 08-04 cache file was complete. All four SNAP outputs were
+    re-read and checked (same extent; VV p50 0.180–0.183; LIA p50 48.5°).
+  - The stale 276 MB `.part` was deleted.
+- **Where:** `src/cutoff/data/{s1_acquire,dem,snap}.py`, `tests/test_p1_stage_s1.py`.
+- **Checked:** `test_cache_temp_files_are_unique_per_process` (pid in the name, same folder, no temp file left after a
+  write) went red, then green.
+
+### U11 — E3c downstream and P1.7 full-mode acceptance
+- `--mode full` chain on trishuli_north (4 scenes through SNAP 14). Every stage passed `validate_run_dir`, so the
+  **P1.7 acceptance is met**.
+- **E3c downstream:**
+  - flood (1–2) IoU **0.735** on 49 / 36 px;
+  - hazard 1–4 IoU 0.313; rule decrease 0.352; rule increase 0.249; permanent water 0.808;
+  - pixel agreement 99.19 %.
+- **Cause of the low rule-class IoU:** SNAP's smoother 10 m output gives a lower stable σ (0.90 vs 1.31 dB), so the
+  3σ change rule fires about 2.4× more. Reported in `docs/results/E3c.md`; frozen thresholds are not retuned.
+- Raw numbers: `docs/results/raw/E3c_iou.json`, `E3c_full_stage_returns.json`.
+
+
+## 2026-10-13 (evening) — real data runs (branch `p1/P1.8-real-runs`, stacked on `p1/P1.7-snap14-gpt-check`)
+
+### Starting point
+- The user created a new CDSE Sentinel Hub OAuth client and finished the CDSE account setup. `.env` was updated
+  (git-ignored; the values are in no commit or document). Both logins now succeed through the project code
+  (`sentinelhub.get_token`, `snap.cdse_token`).
+- `git fetch`: `origin/main` unchanged (`0ae4d83`); the two previous P1 branches are not merged yet, so this branch is
+  stacked on them.
+
+### U8 — real bright σ⁰ no longer stops the run; values > 50 clipped only when written
+- **What:**
+  1. `s1_acquire._check_linear` (the dB guard) now rejects only **negative** values. Linear σ⁰ cannot be negative; dB
+     almost always is.
+  2. `stage_s1` clips `s1_post` / `s1_pre_mean` at `LINEAR_MAX = 50` **after** speckle filtering and the pre-mean,
+     and logs the count (`clipped_px` in `run.log` and in the GeoTIFF tags).
+- **Why:**
+  - The first real run stopped: pre scene 2026-08-16 has VV up to **113.7 linear** (+20.6 dB) on **20 of 2.98 M
+    pixels**. They are on 46° slopes facing the radar (LIA ≈ 10°), not layover, and no value was negative. The old
+    guard copied the frozen contract validator's rule "> 50 = dB written by mistake".
+  - That validator (`contracts_check.py`, a shared contract file P1 must not edit) would reject any real Himalayan
+    run on those pixels.
+  - **Clipping at 50 changes no downstream number.** `geo.sar.to_db` caps at `DB_CEIL` = +5 dB (3.16 linear). A
+    pixel clipped to 50 stays ≥ 50/3 ≈ 16.7 in any 3-scene pre-mean, so it still maps to +5 dB. Filtering happens
+    before the clip, so neighbours are unchanged.
+  - Setting the pixels to NaN instead would have thrown away valid observations.
+- **Real counts:**
+
+  | AOI | post | pre-mean |
+  |---|---|---|
+  | trishuli_north | 0 | 20 |
+  | trishuli_south | 35 | 27 |
+  | deir_ez_zor | 0 | 6 |
+- **Flag for the team (contract owners):** the validator's "> 50" rule is a heuristic that real steep-terrain σ⁰
+  violates. A `contract-change` could relax it (e.g. to "any negative value"). Until then P1 clips at 50.
+- **Where:** `src/cutoff/data/s1_acquire.py`, `tests/test_p1_stage_s1.py`.
+- **Checked:**
+  - New test `test_bright_real_sigma0_is_kept_and_clipped_only_at_the_contract_maximum` (113.7 target → written as
+    50, `to_db` identical, counts logged) went red, then green.
+  - `test_db_is_never_written` still passes: dB input still raises before anything is written or cached.
+
+### U9 — real runs: P1.3, P1.4, P1.6, P1.8, E5, E3c
+- **P1.3 live test passed.** VV median 0.0957 (≈ the Kuro Siwo VV mean 0.0953), LIA in [0, 90] on 99.3 %, transform
+  equal to the chunk grid, 3.8 PU per 500 × 500 chunk.
+- **P1.4 / P1.6 / P1.8:** the three AOIs are cached with real s1 + terrain + s2 (table in `P1.8.md`); quick-looks are
+  in the reports; cached mode works for all three. **O7 measured:** about 45.5 PU per S1 scene on the trishuli_north
+  grid, about 23 PU per S2 full-grid fetch, about 1 PU per 20 m SCL probe.
+- **E5 run:** `stable_steep_fpr` is 2.1 × 10⁻⁶ (same-track) vs 0.295 (cross-track); flood area 0.005 vs 87.3 km².
+  H3 holds (`docs/results/E5.md`, raw returns in `docs/results/raw/`).
+- **E3c σ⁰ part run:**
+  - median |ΔdB| 0.59 / 0.58 dB (VV/VH), so the [TARGET] ≤ 0.5 is **narrowly missed** and reported as such;
+  - 0.25 / 0.24 dB at 50 m block means;
+  - |ΔLIA| median 0.34°;
+  - SNAP 14 run: download 362 s, `gpt` 40 s.
+- **Findings for P2** (reported, not acted on):
+  1. On same-track Trishuli the model alone finds 0.005 km² of flood; the hazard comes from the change rule.
+  2. The 9.77 km² of "permanent water" is mostly radar back-slopes (94 % HAND > 30 m, median LIA 77°). Gating rule 4
+     has no terrain check.
+
+
 ## 2026-10-13 (later) — credentials provided, SNAP installed (branch `p1/P1.7-snap14-gpt-check`)
 
 ### Starting point

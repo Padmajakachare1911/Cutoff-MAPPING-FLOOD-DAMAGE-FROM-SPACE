@@ -21,6 +21,7 @@ import numpy as np
 import requests
 
 from cutoff.data.cdse import Scene
+from cutoff.data.s1_acquire import _tmp_path
 from cutoff.geo.grid import Grid
 
 GRAPH = Path(__file__).resolve().parents[3] / "graphs" / "s1_cutoff.xml"
@@ -71,7 +72,7 @@ def download_product(scene: Scene, dest: Path, cfg: dict, log: Callable | None =
     if not scene.product_uuid:
         raise ValueError(f"{scene.id}: no product uuid in the STAC item (properties._private.product_uuid)")
     dest.parent.mkdir(parents=True, exist_ok=True)
-    tmp = dest.with_suffix(".part")
+    tmp = _tmp_path(dest)
     t0 = time.time()
     url = ODATA_URL.format(uuid=scene.product_uuid)
     with requests.get(url, headers={"Authorization": f"Bearer {cdse_token(cfg)}"}, stream=True, timeout=600) as r:

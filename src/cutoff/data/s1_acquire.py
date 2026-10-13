@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import timedelta
 from pathlib import Path
 from typing import Callable
@@ -26,6 +27,11 @@ from cutoff.runctx import RunContext
 
 STAGE = "s1"
 MIN_VALID_FRACTION = 0.8
+# Upper bound the frozen contract validator accepts for linear sigma0 (contracts_check: "> 50 = dB written by
+# mistake"). Real ellipsoid sigma0 on slopes facing the radar exceeds it (Trishuli 2026-08-16: VV up to 113.7 on
+# 20 of 2.98 M px), so values are clipped here AFTER speckle filtering and the pre-mean. This changes no downstream
+# number: geo.sar.to_db caps at DB_CEIL = 5 dB (3.16 linear) and a clipped pixel stays >= 50 / 3 in any pre-mean.
+LINEAR_MAX = 50.0
 
 
 class CacheMiss(RuntimeError):
@@ -37,6 +43,12 @@ def grid_hash(grid: Grid) -> str:
     key = json.dumps({"epsg": grid.epsg, "transform": [round(v, 6) for v in grid.transform],
                       "width": grid.width, "height": grid.height}, sort_keys=True)
     return hashlib.sha1(key.encode()).hexdigest()[:12]
+
+
+def _tmp_path(path: Path) -> Path:
+    """Per-process temp name next to `path` (written, then atomically renamed). A shared name let two overlapping
+    runs collide on Windows ('Permission denied' deleting <hash>.snap.tmp.tif, 2026-10-13)."""
+    return path.with_name(f"{path.name}.{os.getpid()}.tmp")
 
 
 def cache_root(ctx: RunContext) -> Path:
@@ -78,7 +90,7 @@ def _write_cached(path: Path, arr: np.ndarray, grid: Grid, backend: str, scene: 
     import rasterio
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp.tif")
+    tmp = _tmp_path(path)
     with rasterio.open(tmp, "w", **grid.profile("float32", 4, np.nan)) as dst:
         dst.write(arr.astype(np.float32))
         dst.update_tags(backend=backend, scene=scene.id, bands="VV,VH,LIA,dataMask")
@@ -88,8 +100,9 @@ def _write_cached(path: Path, arr: np.ndarray, grid: Grid, backend: str, scene: 
 
 
 def _check_linear(arr: np.ndarray, scene: Scene) -> None:
+    """dB detector: linear sigma0 is never negative, dB almost always is. Bright (> LINEAR_MAX) values are real."""
     vals = arr[:2][np.isfinite(arr[:2]) & (arr[3][None] > 0)]
-    if vals.size and (vals.min() < 0 or vals.max() > 50):
+    if vals.size and vals.min() < 0:
         raise ValueError(f"{scene.id}: backend returned values {vals.min():.3g}..{vals.max():.3g}; "
                          "expected linear sigma0 (dB is never written)")
 
@@ -210,8 +223,12 @@ def stage_s1(ctx: RunContext) -> dict:
     lia_ok = post_valid & np.isfinite(lia)
     shadow = (lia_ok & ((lia <= lo) | (lia >= hi))).astype(np.uint8)
     tags = {"units": "linear sigma0", "backend": "+".join(sorted(used)), "post": chosen["post"].id}
-    raster_io.write(ctx, "s1_post", post, tags=tags)
-    raster_io.write(ctx, "s1_pre_mean", pre_mean, tags=tags | {"pre": ",".join(p.id for p in chosen["pre"])})
+    clipped = {"post": int((post > LINEAR_MAX).sum()), "pre_mean": int((pre_mean > LINEAR_MAX).sum())}
+    post, pre_mean = np.minimum(post, LINEAR_MAX), np.minimum(pre_mean, LINEAR_MAX)  # NaN stays NaN
+    tags = tags | {"clipped_at": LINEAR_MAX}
+    raster_io.write(ctx, "s1_post", post, tags=tags | {"clipped_px": clipped["post"]})
+    raster_io.write(ctx, "s1_pre_mean", pre_mean, tags=tags | {"pre": ",".join(p.id for p in chosen["pre"]),
+                                                               "clipped_px": clipped["pre_mean"]})
     raster_io.write(ctx, "lia", lia, tags={"scene": chosen["post"].id})
     raster_io.write(ctx, "shadow_layover", shadow)
 
@@ -221,7 +238,7 @@ def stage_s1(ctx: RunContext) -> dict:
     for name, f in (("post", f_post), ("pre-mean", f_pre)):
         if f < MIN_VALID_FRACTION:
             ctx.warn(STAGE, f"Sentinel-1 {name}: only {100 * f:.1f}% of the grid is valid (< 80%)")
-    ctx.log(STAGE, event="written", valid_post=round(f_post, 4), valid_pre_mean=round(f_pre, 4),
+    ctx.log(STAGE, event="written", valid_post=round(f_post, 4), valid_pre_mean=round(f_pre, 4), clipped_px=clipped,
             shadow_layover_fraction=round(float(shadow.mean()), 4), backend_used=sorted(used))
 
     brief = lambda s: {"id": s.id, "datetime": iso(s.datetime), "platform": s.platform}

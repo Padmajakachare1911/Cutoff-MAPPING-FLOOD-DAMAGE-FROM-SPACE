@@ -4,23 +4,23 @@ This file is kept current after every P1 change, so another agent or teammate ca
 list is in `docs/plan/01_P1_data_sar.md`; per-task details are in `P1.0.md` … `P1.8.md`; every change after the first
 merge is in `P1_UPDATES_LOG.md`.
 
-**Status (2026-10-13): all P1 code is merged on `main`** (PRs #13–#21, CI green). Everything that needs real Sentinel-1/-2
-data is **BLOCKED on credentials**. Since 2026-10-13 `.env` is filled and SNAP 14.0.0 is installed and verified, but
-CDSE rejects both logins (see "Credentials" below).
+**Status (2026-10-13, evening): P1 is complete except the team-Drive upload.** All P1 code is merged on `main` (PRs #13–#21);
+three follow-up branches wait for review (below). Real Sentinel-1/-2 data now runs end-to-end: the logins work, SNAP
+14.0.0 is verified, all three demo AOIs are cached, and E5 and E3c are measured. Full task-by-task status:
+`P1_CHECKLIST.md`.
 
 ## Status board (playbook §5; copy these lines to the pinned "Status board" issue)
 ```
-P1.0 STAC fixture + setup      | done (merged #13)  | blocker: .env (SH_CLIENT_ID/SECRET) not filled
-P1.1 pair selection            | done (merged #14)  | blocker: none
-P1.2 Lee sigma filter          | done (merged #15)  | blocker: none
-P1.3 Sentinel Hub backend      | code done (#16)    | blocker: live test needs SH credentials
-P1.4 stage_s1 + cache_aoi      | code done (#18)    | blocker: real Trishuli run needs SH credentials
-P1.5 terrain stage             | done (#17), real Trishuli run verified | blocker: none
-P1.6 Sentinel-2 stage          | code done (#19)    | blocker: SH credentials
-P1.7 SNAP full mode            | code done (#20), SNAP 14 params verified | blocker: CDSE login rejected (account setup)
-P1.8 demo AOIs + E3c/E5        | terrain cached for 3 AOIs (#21) | blocker: SH credentials (s1/s2 cache, E5), + SNAP (E3c)
-P1 review follow-ups           | PR p1/P1-review-followups | blocker: none
-P1 SNAP 14 check + login errors| PR p1/P1.7-snap14-gpt-check (on top of the follow-ups) | blocker: none
+P1.0 STAC fixture + setup      | done (#13)                                   | blocker: none
+P1.1 pair selection            | done (#14)                                   | blocker: none
+P1.2 Lee sigma filter          | done (#15)                                   | blocker: none
+P1.3 Sentinel Hub backend      | done (#16), live test passed 2026-10-13      | blocker: none
+P1.4 stage_s1 + cache_aoi      | done (#18), real Trishuli run 2026-10-13     | blocker: none
+P1.5 terrain stage             | done (#17), real Trishuli run verified       | blocker: none
+P1.6 Sentinel-2 stage          | done (#19), real S2 on 3 AOIs                | blocker: none
+P1.7 SNAP full mode            | done (#20), SNAP 14 verified, full chain run | blocker: none
+P1.8 demo AOIs + E3c/E5        | 3 AOIs cached, E5 done, E3c done             | blocker: team Drive link for the cache upload
+follow-ups (3 stacked PRs)     | p1/P1-review-followups -> p1/P1.7-snap14-gpt-check -> p1/P1.8-real-runs (merge in this order)
 ```
 
 ## Findings for other streams (IMPORTANT)
@@ -41,33 +41,37 @@ P1 SNAP 14 check + login errors| PR p1/P1.7-snap14-gpt-check (on top of the foll
 5. **P2: your open item 1** (model → disturbance → gating → vectorize on real Trishuli rasters) can be run with
    `scripts/cache_aoi.py --stages s1,terrain,model,disturbance,gating,vectorize --model models/cutoff_unet_v1.pt` as
    soon as the s1 cache exists. It is smoke-tested with `model-v1` on the mock run only.
-6. **Everyone: Deir ez-Zor is a flat floodplain.** It has no HAND > 100 m terrain, so P2's D9 fallback (HAND > 60 m →
+6. **P4: cached mode is ready for all three AOIs** (`trishuli_north`, `trishuli_south`, `deir_ez_zor`). Use the
+   same bboxes as in `P1.8.md`, since the cache is keyed on the grid.
+7. **P2: real Trishuli check (your open item 1) is effectively done by E5's same-track run** (`docs/results/E5.md`):
+   - `stable_steep_fpr` = 2.1 × 10⁻⁶;
+   - the model alone gives 0.005 km² of flood, the rule layer 0.24 km²;
+   - no-observation 1.59 km².
+
+   **Look at "permanent water" = 9.77 km²:** it is mostly radar back-slopes (94 % HAND > 30 m, median LIA 77°).
+   Gating rule 4 has no terrain check.
+8. **Contract owners: `contracts_check` rejects linear σ⁰ > 50 as "dB by mistake"**, but real steep-terrain σ⁰ reaches
+   114. P1 clips at 50 when writing (no downstream effect, `P1_UPDATES_LOG.md` U8). Consider relaxing the check to
+   "negative values" via a `contract-change`.
+9. **Everyone: Deir ez-Zor is a flat floodplain.** It has no HAND > 100 m terrain, so P2's D9 fallback (HAND > 60 m →
    all valid pixels, with a warning) will apply there. That is expected, not a bug.
 
-## Credentials (2026-10-13)
-`.env` holds `SH_CLIENT_ID`, `SH_CLIENT_SECRET`, `CDSE_USERNAME` and `CDSE_PASSWORD`. It is git-ignored and never
-committed. CDSE's identity server refuses both:
-
-| Login | Server answer | What fixes it |
-|---|---|---|
-| Sentinel Hub OAuth client | `401 invalid_client - Invalid client or Invalid client credentials` | The client ID/secret pair is not valid on CDSE: the secret was mistyped or regenerated, the client expired, or it was created on commercial Sentinel Hub instead of CDSE. Create a new OAuth client at https://shapps.dataspace.copernicus.eu/dashboard → User settings → OAuth clients, copy the secret when it is shown (only once), and put both in `.env`. |
-| CDSE account (download) | `400 invalid_grant - Account is not fully set up` | Keycloak has a pending required action on the account: email verification, accepting the terms, or completing the profile. Log in once at https://dataspace.copernicus.eu in a browser and finish every step it asks for. |
-
-Check from the repo (prints the server's reason, never the secret):
-`python -c "import yaml; from cutoff.data import sentinelhub as sh, snap; c=yaml.safe_load(open('configs/default.yaml')); print(sh.get_token(*sh.sh_credentials(), c['s1']['sentinelhub']['token_url'])[:8], snap.cdse_token(c)[:8])"`
+## Credentials
+Resolved 2026-10-13 (evening). The first OAuth client was rejected (`invalid_client`) and the CDSE account was "not
+fully set up". With a new OAuth client from the CDSE dashboard and a completed account setup, both logins work. `.env`
+is git-ignored. Each person needs their own (master plan §5).
 
 ## What exists on the P1 machine (git-ignored)
 - `cache/trishuli_north`, `cache/trishuli_south`, `cache/deir_ez_zor`: `grid.json`, `pairs.json`,
   `dem/slope/hand/flwdir_d8.tif`, `run.log`, `stage_returns.json`.
 - `cache/dem/` (buffered DEMs) and `cache/s1/stac/` (search results).
 - `models/cutoff_unet_v1.pt` (downloaded from release `model-v1`).
-- No S1 or S2 rasters yet.
+- Real S1/S2 for all three AOIs: about 1.0 GB in total, plus 1.3 GB+ of SNAP product zips in `cache/s1/products/` (not
+  needed for cached mode).
+- `outputs/e5_same`, `outputs/e5_cross`, `outputs/e3c_full`: experiment run folders.
 
-## How to resume (in order)
-1. Fix the two logins ("Credentials" above) so the check command prints two token prefixes. SNAP is done: SNAP 14.0.0,
-   `python -m cutoff.data.snap --check-gpt` → `ok: true`.
-2. `python -m pytest -m network -rs`: the live Sentinel Hub chunk test and the STAC/DEM tests.
-3. Rerun the three `scripts/cache_aoi.py` commands in `P1.8.md`; the terrain and STAC caches are reused.
-4. Add the `run.log` excerpt and the VV dB pre/post quick-look to `P1.4.md`.
-5. Run E5 and E3c as written in `docs/results/E5.md` / `E3c.md`; upload `cache/` to the team Drive and link it in
-   `P1.8.md`.
+## How to resume
+1. Merge the three follow-up branches in order (each needs its PR opened first).
+2. Upload `cache/` (without `cache/s1/products/`) to the team Drive and link it in `P1.8.md`.
+3. Any new AOI: `python scripts/cache_aoi.py --name <n> --bbox W,S,E,N --event <UTC>` (fast mode, about 3 min and
+   about 210 PU per AOI).

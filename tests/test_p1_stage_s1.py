@@ -180,3 +180,48 @@ def test_fast_mode_speckle_filters_every_scene_and_band(tmp_path, fake, monkeypa
     s1_acquire.stage_s1(make_ctx(tmp_path))
     assert len(calls) == 2 * 4                       # (post + 3 pre) x (VV, VH)
     assert all(kw == {"window": 7, "target": 3, "sigma": 0.9, "looks": 4.4} for kw in calls)
+
+
+class BrightBackend(FakeBackend):
+    """Real Trishuli 2026-08-16 VV reaches 113.7 linear on 46 deg slopes facing the radar (20 of 2.98 M px)."""
+
+    def __call__(self, scene, grid, ctx):
+        arr = super().__call__(scene, grid, ctx)
+        arr[0, 30:33, 30:33] = 113.7      # a bright 3x3 target: lee_sigma keeps it unfiltered
+        return arr
+
+
+def test_bright_real_sigma0_is_kept_and_clipped_only_at_the_contract_maximum(tmp_path, monkeypatch):
+    from cutoff.geo.sar import to_db
+
+    monkeypatch.setitem(s1_acquire.BACKENDS, "sentinelhub", BrightBackend())
+    monkeypatch.setattr(s1_acquire, "search_items", lambda *a, **k: ITEMS)
+    ctx = make_ctx(tmp_path)
+    s1_acquire.stage_s1(ctx)                                     # must not raise on real bright targets
+    validate_run_dir(ctx.run_dir, keys=S1_KEYS)
+    post, pre = read(ctx, "s1_post"), read(ctx, "s1_pre_mean")
+    assert post[0, 31, 31] == s1_acquire.LINEAR_MAX and pre[0, 31, 31] == s1_acquire.LINEAR_MAX
+    assert np.allclose(post[0, 100, 100], 0.02)                  # everything else untouched
+    assert to_db(post)[0, 31, 31] == to_db(np.float32(113.7))    # clipping is invisible to the model input (5 dB cap)
+    log = [json.loads(l) for l in ctx.path("run_log").read_text(encoding="utf-8").splitlines()]
+    written = next(r for r in log if r.get("event") == "written")
+    assert written["clipped_px"] == {"post": 9, "pre_mean": 9}
+
+
+def test_cache_temp_files_are_unique_per_process(tmp_path, monkeypatch):
+    """Two overlapping runs once collided on '<hash>.snap.tmp.tif' (Windows: 'Permission denied' on delete)."""
+    import os
+
+    from cutoff.data import dem, snap
+
+    p = tmp_path / "s1" / "scene" / "abc.snap.tif"
+    for mod in (s1_acquire, dem, snap):
+        t = mod._tmp_path(p)
+        assert str(os.getpid()) in t.name and t.parent == p.parent and t != p
+    assert s1_acquire._tmp_path(p) != s1_acquire._tmp_path(p.with_name("abc.tif"))
+    g = make_grid(BBOX)
+    arr = np.ones((4, g.height, g.width), np.float32)
+    from types import SimpleNamespace
+    sc = SimpleNamespace(id="X")
+    s1_acquire._write_cached(p, arr, g, "snap", sc)
+    assert p.exists() and [q.name for q in p.parent.iterdir()] == ["abc.snap.tif"]   # no temp left behind

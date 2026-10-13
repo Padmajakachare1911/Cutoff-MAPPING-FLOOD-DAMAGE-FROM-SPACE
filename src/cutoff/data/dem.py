@@ -15,6 +15,7 @@ from pathlib import Path
 
 import numpy as np
 
+from cutoff.data.s1_acquire import _tmp_path
 from cutoff.geo.grid import Grid
 from cutoff.geo.terrain import buffered_grid, crop_to, hand_flowdir, slope_degrees
 from cutoff.runctx import RunContext
@@ -89,7 +90,7 @@ def _cached_dem(ctx: RunContext, buffer_m: float) -> tuple[np.ndarray, Grid]:
         raise CacheMiss(f"cached mode: no DEM in the cache ({path}); run scripts/cache_aoi.py for this AOI first")
     dem, bg2 = dem_on_grid(ctx.grid, buffer_m=buffer_m)
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(".tmp.tif")
+    tmp = _tmp_path(path)
     with rasterio.open(tmp, "w", **bg2.profile("float32", 1, np.nan)) as dst:
         dst.write(dem[None])
     tmp.replace(path)

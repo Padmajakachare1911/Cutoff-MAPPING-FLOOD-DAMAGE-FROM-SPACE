@@ -1,0 +1,62 @@
+{
+ "flood_1_2": {
+  "classes": [
+   1,
+   2
+  ],
+  "fast_px": 49,
+  "full_px": 36,
+  "intersection_px": 36,
+  "union_px": 49,
+  "iou": 0.7347
+ },
+ "hazard_1_4": {
+  "classes": [
+   1,
+   2,
+   3,
+   4
+  ],
+  "fast_px": 2432,
+  "full_px": 5960,
+  "intersection_px": 2002,
+  "union_px": 6390,
+  "iou": 0.3133
+ },
+ "rule_decrease_3": {
+  "classes": [
+   3
+  ],
+  "fast_px": 1643,
+  "full_px": 3340,
+  "intersection_px": 1298,
+  "union_px": 3685,
+  "iou": 0.3522
+ },
+ "rule_increase_4": {
+  "classes": [
+   4
+  ],
+  "fast_px": 740,
+  "full_px": 2584,
+  "intersection_px": 663,
+  "union_px": 2661,
+  "iou": 0.2492
+ },
+ "permanent_water_5": {
+  "classes": [
+   5
+  ],
+  "fast_px": 97143,
+  "full_px": 86641,
+  "intersection_px": 82126,
+  "union_px": 101658,
+  "iou": 0.8079
+ },
+ "no_obs_px": {
+  "fast": 15853,
+  "full": 49730,
+  "both": 14450
+ },
+ "pixel_agreement_all_classes_on_both_observed": 0.99185
+}

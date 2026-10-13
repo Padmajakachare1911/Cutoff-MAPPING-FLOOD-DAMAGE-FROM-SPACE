@@ -1,0 +1,81 @@
+{
+ "name": "e5_cross",
+ "bbox": [
+  85.28,
+  28.1,
+  85.42,
+  28.29
+ ],
+ "event": "2026-08-26T02:52:00Z",
+ "mode": "fast",
+ "returns": {
+  "s1": {
+   "s1_backend": "sentinelhub",
+   "rel_orbit": 85,
+   "orbit_direction": "ascending",
+   "s1_post": {
+    "id": "S1D_IW_GRDH_1SDV_20260828T122141_20260828T122206_004326_007FA4_C73B_COG",
+    "datetime": "2026-08-28T12:21:41.762029Z",
+    "platform": "sentinel-1d"
+   },
+   "s1_pre": [
+    {
+     "id": "S1D_IW_GRDH_1SDV_20260824T001844_20260824T001909_004260_007D5D_45FC_COG",
+     "datetime": "2026-08-24T00:18:44.555468Z",
+     "platform": "sentinel-1d"
+    },
+    {
+     "id": "S1D_IW_GRDH_1SDV_20260812T001844_20260812T001909_004085_007738_F79E_COG",
+     "datetime": "2026-08-12T00:18:44.017122Z",
+     "platform": "sentinel-1d"
+    },
+    {
+     "id": "S1D_IW_GRDH_1SDV_20260731T001843_20260731T001908_003910_007127_06F1_COG",
+     "datetime": "2026-07-31T00:18:43.440067Z",
+     "platform": "sentinel-1d"
+    }
+   ],
+   "post_lag_hours": 57.495
+  },
+  "terrain": {
+   "dem_tiles": [
+    "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N28_00_E085_00_DEM/Copernicus_DSM_COG_10_N28_00_E085_00_DEM.tif"
+   ],
+   "hand_stream_upa_km2": 1.0
+  },
+  "model": {
+   "model_version": "cutoff_unet_v1.pt",
+   "flood_threshold": 0.5,
+   "temperature": 1.0365309715270996
+  },
+  "disturbance": {
+   "sigma_stable_db": 14.710783958435059,
+   "k_sigma": 3.0,
+   "n_stable_px": 2546000
+  },
+  "gating": {
+   "stable_steep_fpr": 0.2951885615567552
+  },
+  "vectorize": {
+   "area_km2_by_class": {
+    "flood_high": 0.9514,
+    "flood_possible": 86.3224,
+    "rule_decrease": 0.0,
+    "rule_increase": 0.0,
+    "permanent_water": 39.1188
+   },
+   "no_observation_km2": 1.5853
+  }
+ },
+ "timings": {
+  "s1": 212.5,
+  "terrain": 12.5,
+  "model": 11.3,
+  "disturbance": 0.5,
+  "gating": 0.6,
+  "vectorize": 1.0
+ },
+ "warnings": [
+  "Sentinel-1: CROSS-TRACK pre/post pair (experiment E5 only) - change detection is biased"
+ ]
+}
