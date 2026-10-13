@@ -5,7 +5,27 @@ See docs/plan/01_P1_data_sar.md for the task list and acceptance tests.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
+
+from cutoff.geo.grid import Grid
 from cutoff.runctx import RunContext
+
+
+class CacheMiss(RuntimeError):
+    """`cached` mode found no cached input for this AOI / scene."""
+
+
+def grid_hash(grid: Grid) -> str:
+    """Short stable id of a grid (CRS, transform, shape) used in cache paths."""
+    key = json.dumps({"epsg": grid.epsg, "transform": [round(v, 6) for v in grid.transform],
+                      "width": grid.width, "height": grid.height}, sort_keys=True)
+    return hashlib.sha1(key.encode()).hexdigest()[:12]
+
+
+def cache_root(ctx: RunContext) -> Path:
+    return Path(ctx.cfg.get("run", {}).get("cache_dir", "cache/"))
 
 
 def stage_s1(ctx: RunContext) -> dict:
