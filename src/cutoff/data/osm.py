@@ -158,7 +158,13 @@ def _request_v2(aoi, layer: str, snapshot_iso: str, cfg: dict[str, Any]) -> gpd.
         except (httpx.HTTPError, OSError, ValueError) as exc:
             last = exc
             if attempt < 2:
-                time.sleep(0.25 * (2 ** attempt))
+                retry_after = 0.0
+                if isinstance(exc, httpx.HTTPStatusError):
+                    try:
+                        retry_after = float(exc.response.headers.get("retry-after", 0))
+                    except ValueError:
+                        retry_after = 0.0
+                time.sleep(max(retry_after, 5.0 * (2 ** attempt)))
     raise RuntimeError(f"ohsome v2 failed after 3 attempts: {last}") from last
 
 
@@ -237,6 +243,9 @@ def stage_osm(ctx: RunContext) -> dict:
                 part = fetch_layer(tile.intersection(extent), layer, ctx.osm_snapshot, ctx.cfg)
                 apis.add(part.attrs.get("osm_api", "v2"))
                 pieces.append(part)
+                delay = float(settings.get("request_delay_s", 0.5))
+                if delay > 0:
+                    time.sleep(delay)
             frame = gpd.GeoDataFrame(pd.concat(pieces, ignore_index=True), crs=4326)
             frame = frame.drop_duplicates("osm_id").reset_index(drop=True)
             frame.to_parquet(cache_path)

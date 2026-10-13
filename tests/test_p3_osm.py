@@ -48,6 +48,18 @@ def test_parse_roads_flattens_tags_and_derives_contract_fields():
     assert got.name.tolist() == ["A", "", ""]
 
 
+def test_recorded_v2_roads_fixture_parses_contract_fields():
+    fixture = Path(__file__).parent / "fixtures" / "ohsome_roads_sample.parquet"
+    raw = gpd.read_parquet(fixture, to_pandas_kwargs={"maps_as_pydicts": "strict"})
+
+    got = parse_layer(raw, "roads")
+
+    assert len(got) == 580
+    assert got.osm_id.str.startswith("way/").all()
+    assert set(got.tier) <= {"road", "track", "trail"}
+    assert got.bridge.dtype == bool
+
+
 def test_source_never_requests_latest():
     source = inspect.getsource(osm)
     assert '"time": "latest"' not in source
@@ -91,6 +103,7 @@ def test_stage_osm_tiles_deduplicates_and_validates_outputs(tmp_path, monkeypatc
     run_dir = make_mock_run(tmp_path / "mock")
     cfg = yaml.safe_load((Path(__file__).parents[1] / "configs" / "default.yaml").read_text())
     cfg["run"]["cache_dir"] = str(tmp_path / "cache")
+    cfg["osm"]["request_delay_s"] = 0
     ctx = RunContext(run_dir, "mock", MOCK_BBOX, EVENT, "2026-07-27T00:00:00Z", "fast", cfg,
                      Grid.from_json(run_dir / "grid.json"))
 

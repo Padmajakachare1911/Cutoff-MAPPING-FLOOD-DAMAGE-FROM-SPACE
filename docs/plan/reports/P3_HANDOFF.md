@@ -19,9 +19,7 @@
 
 ## External prerequisites still open
 
-1. Supply `OHSOME_API_KEY` and complete P3.0 live v2 schema/count reconnaissance and ≤1 MB fixtures.
-2. Produce a real Trishuli run, then record the flow-path acceptance map and measured E6 table.
-3. Create the project-level `frozen-v1` tag before running the explicitly post-freeze external transport check.
+1. Produce a real Trishuli run, then record the flow-path acceptance map and measured E6 table.
+2. Create the project-level `frozen-v1` tag before running the explicitly post-freeze external transport check.
 
-The checkout currently has no key, cached inputs, run outputs, or `frozen-v1` tag. The unauthenticated v1 request
-was attempted and returned HTTP 403.
+P3.0 v2 reconnaissance is complete. The checkout still has no cached P1/P2 inputs, run outputs, or `frozen-v1` tag.
