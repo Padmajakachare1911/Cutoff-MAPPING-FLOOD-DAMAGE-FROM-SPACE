@@ -18,9 +18,13 @@ Copernicus 30 m DEM and SNAP Lee Sigma)?
 - Downstream: IoU of the flood masks (hazard classes 1–2) between the two backends, once P2's model exists.
 
 ## Procedure
+Model: P2's frozen release `model-v1` (`models/cutoff_unet_v1.pt`, git-ignored). Download it once:
+`curl -L -o models/cutoff_unet_v1.pt https://github.com/Padmajakachare1911/Cutoff-MAPPING-FLOOD-DAMAGE-FROM-SPACE/releases/download/model-v1/cutoff_unet_v1.pt`
+(98 MB; the runner was smoke-tested with it on the mock run on 2026-10-13, see `docs/plan/reports/P1_UPDATES_LOG.md`).
+
 ```
-python scripts/cache_aoi.py --name e3c_fast --bbox 85.28,28.10,85.42,28.29 --event 2026-08-26T02:52:00Z --mode fast --out outputs/e3c_fast --stages s1,terrain,model,disturbance,gating --model <ckpt>
-python scripts/cache_aoi.py --name e3c_full --bbox 85.28,28.10,85.42,28.29 --event 2026-08-26T02:52:00Z --mode full --out outputs/e3c_full --stages s1,terrain,model,disturbance,gating --model <ckpt>
+python scripts/cache_aoi.py --name e3c_fast --bbox 85.28,28.10,85.42,28.29 --event 2026-08-26T02:52:00Z --mode fast --out outputs/e3c_fast --stages s1,terrain,model,disturbance,gating --model models/cutoff_unet_v1.pt
+python scripts/cache_aoi.py --name e3c_full --bbox 85.28,28.10,85.42,28.29 --event 2026-08-26T02:52:00Z --mode full --out outputs/e3c_full --stages s1,terrain,model,disturbance,gating --model models/cutoff_unet_v1.pt
 ```
 Then `backend_consistency(read(e3c_fast/s1_post), read(e3c_full/s1_post), hand, slope, shadow)` and the IoU of
 `hazard_class ∈ {1, 2}`.
@@ -36,4 +40,4 @@ Flood-mask IoU between backends: — (not run).
 ## Blockers
 - `SH_CLIENT_ID` / `SH_CLIENT_SECRET` (fast backend).
 - ESA SNAP `gpt` installed, plus `CDSE_USERNAME` / `CDSE_PASSWORD` (full backend download).
-- A P2 checkpoint for the IoU part (b0 can stand in, but say so).
+- ~~A P2 checkpoint for the IoU part~~ available since 2026-10-13: release `model-v1` (`models/cutoff_unet_v1.pt`, download command in `E5.md`).

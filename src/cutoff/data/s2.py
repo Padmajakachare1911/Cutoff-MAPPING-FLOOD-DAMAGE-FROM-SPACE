@@ -1,7 +1,7 @@
 """Stage `s2`: optional Sentinel-2 L2A evidence (MNDWI water + clear-sky mask) near the S1 post date.
 
 Owner: P1 (task P1.6). Candidates: STAC `sentinel-2-l2a` within +-5 days of the S1 post scene and after the
-event; the date with the most clear AOI pixels wins (cheap 20 m SCL probe), then B03, B11 and SCL are fetched
+event (`s2.require_after_event`, default true); the date with the most clear AOI pixels wins (cheap 20 m SCL probe), then B03, B11 and SCL are fetched
 on the grid through the Process API (reflectance, no manual offset). clear = SCL in {4, 5, 6, 7} (snow, 11,
 excluded: D11); water = clear & MNDWI = (B03 - B11) / (B03 + B11) > 0; 255 outside the data mask.
 The stage never fails the run: no / cloudy / unreachable data -> no files, a warning, empty return.
@@ -33,11 +33,12 @@ def s2_layers(b03, b11, scl, data_mask, clear_scl=(4, 5, 6, 7), mndwi_threshold:
     return out_w, out_c, float(clear.sum()) / clear.size
 
 
-def _cache_paths(ctx: RunContext, post_id: str):
+def _cache_paths(ctx: RunContext, post_id: str, after_event: bool = True):
     from cutoff.data.s1_acquire import cache_root, grid_hash
 
     d = cache_root(ctx) / "s2" / grid_hash(ctx.grid)
-    return d / f"{post_id}.tif", d / f"{post_id}.json"
+    stem = post_id if after_event else f"{post_id}.any_date"  # the date rule changes the selection
+    return d / f"{stem}.tif", d / f"{stem}.json"
 
 
 def _get(ctx: RunContext, around, days: int, post_id: str):
@@ -46,7 +47,8 @@ def _get(ctx: RunContext, around, days: int, post_id: str):
 
     from cutoff.data import sentinelhub as sh
 
-    tif, meta = _cache_paths(ctx, post_id)
+    require_after = bool(ctx.cfg.get("s2", {}).get("require_after_event", True))
+    tif, meta = _cache_paths(ctx, post_id, require_after)
     if meta.exists():
         m = json.loads(meta.read_text(encoding="utf-8"))
         if m.get("scenes") is None:
@@ -55,7 +57,7 @@ def _get(ctx: RunContext, around, days: int, post_id: str):
             return ds.read().astype(np.float32), m["scenes"]
     if ctx.mode == "cached":
         raise FileNotFoundError(f"cached mode: no Sentinel-2 cache for this grid ({meta})")
-    got = sh.fetch_s2_best(ctx.grid, around, days, ctx.cfg, after=ctx.event_datetime,
+    got = sh.fetch_s2_best(ctx.grid, around, days, ctx.cfg, after=ctx.event_datetime if require_after else None,
                            log=lambda **f: ctx.log(STAGE, **f))
     meta.parent.mkdir(parents=True, exist_ok=True)
     if got is None:

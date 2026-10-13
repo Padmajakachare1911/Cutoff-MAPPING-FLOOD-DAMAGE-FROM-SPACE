@@ -36,6 +36,8 @@ s2:
   min_clear_fraction: 0.10
   clear_scl: [4, 5, 6, 7]          # snow (11) excluded from "clear" on purpose (MNDWI unreliable on snow)
   mndwi_threshold: 0.0
+  require_after_event: true        # P1.6 review: S2 dates must also be after the event (a pre-event scene in the
+                                   # +-5 d window would demote real flood pixels in gating); false = literal window
 
 model:
   checkpoint: models/cutoff_unet_v1.pt   # contains mean/std, temperature, tau, channels, contract_version

@@ -193,3 +193,36 @@ def test_fetch_s2_best_none_without_candidates(monkeypatch):
     monkeypatch.setattr(sh, "search_items", lambda *a, **k: [])
     g = Grid(epsg=32645, transform=(10.0, 0.0, 330000.0, 0.0, -10.0, 3115000.0), width=40, height=30)
     assert sh.fetch_s2_best(g, datetime(2026, 8, 28, tzinfo=timezone.utc), 5, CFG, credentials=("a", "b")) is None
+
+
+@pytest.mark.parametrize("flag, expected_after", [(True, EVENT), (False, None), ("absent", EVENT)])
+def test_require_after_event_switch(tmp_path, monkeypatch, flag, expected_after):
+    """s2.require_after_event (default true): only post-event S2 dates count as evidence (P1.6 review item)."""
+    seen = {}
+    monkeypatch.setattr(sh, "fetch_s2_best", lambda *a, **k: seen.update(after=k.get("after")) or None)
+    ctx = make_ctx(tmp_path)
+    if flag == "absent":
+        ctx.cfg["s2"].pop("require_after_event", None)
+    else:
+        ctx.cfg["s2"]["require_after_event"] = flag
+    s2mod.stage_s2(ctx)
+    assert seen["after"] == expected_after
+
+
+def test_default_config_requires_post_event_s2():
+    assert CFG["s2"]["require_after_event"] is True
+
+
+def test_switch_is_part_of_the_cache_key(tmp_path, monkeypatch):
+    calls = []
+
+    def fake(grid, around, days, cfg, **kw):
+        calls.append(kw.get("after"))
+        return bands(grid.height, grid.width, scl_value=6, b03=0.1, b11=0.02), "S2A"
+
+    monkeypatch.setattr(sh, "fetch_s2_best", fake)
+    ctx = make_ctx(tmp_path)
+    s2mod.stage_s2(ctx)
+    ctx.cfg["s2"]["require_after_event"] = False
+    s2mod.stage_s2(ctx)
+    assert calls == [EVENT, None]   # the second setting is fetched, not served from the first one's cache

@@ -198,3 +198,54 @@ def test_live_full_mode_trishuli_post(tmp_path):
                      tzinfo=timezone.utc), osm_snapshot="2026-07-27T00:00:00Z", mode="full", cfg=CFG, grid=g)
     s1_acquire.stage_s1(ctx)
     validate_run_dir(run, keys=["s1_pre_mean", "s1_post", "lia", "shadow_layover"])
+
+
+# ---------------------------------------------------------------- gpt -h parameter check (P1.7 open [U] item)
+def _fake_help(known: dict[str, list[str]]):
+    """subprocess.run stand-in printing `gpt <op> -h`-style parameter options."""
+    def run(cmd, **kw):
+        op = cmd[1]
+        lines = [f"Usage:\n  gpt {op} [options]\n\nParameter Options:"]
+        lines += [f"  -P{p}=<string>    Some description. Default value is 'x'." for p in known.get(op, [])]
+
+        class R:
+            returncode = 0 if op in known else 1
+            stdout = "\n".join(lines)
+            stderr = "" if op in known else f"Error: Unknown operator {op}"
+        return R()
+    return run
+
+
+def _graph_params():
+    out = {}
+    for n in ET.parse(snap.GRAPH).getroot().findall("node"):
+        op = n.find("operator").text
+        if op not in ("Read", "Write"):
+            out[op] = [c.tag for c in n.find("parameters")]
+    return out
+
+
+def test_check_gpt_params_all_known():
+    rep = snap.check_gpt_params(gpt="gpt", run=_fake_help(_graph_params()))
+    assert rep["ok"] is True and set(rep["operators"]) == set(_graph_params())
+    assert all(v["missing"] == [] for v in rep["operators"].values())
+
+
+def test_check_gpt_params_reports_missing_and_unknown_operator():
+    known = _graph_params()
+    known["Terrain-Correction"] = [p for p in known["Terrain-Correction"] if p != "saveLocalIncidenceAngle"]
+    known.pop("Remove-GRD-Border-Noise")
+    rep = snap.check_gpt_params(gpt="gpt", run=_fake_help(known))
+    assert rep["ok"] is False
+    assert rep["operators"]["Terrain-Correction"]["missing"] == ["saveLocalIncidenceAngle"]
+    assert rep["operators"]["Remove-GRD-Border-Noise"]["error"]
+
+
+@pytest.mark.slow
+def test_live_gpt_knows_every_graph_parameter():
+    try:
+        gpt = snap.find_gpt()
+    except snap.SnapNotFound as e:
+        pytest.skip(str(e))
+    rep = snap.check_gpt_params(gpt=gpt)
+    assert rep["ok"], rep

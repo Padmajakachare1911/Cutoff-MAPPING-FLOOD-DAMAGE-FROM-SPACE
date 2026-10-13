@@ -167,3 +167,16 @@ def test_no_same_track_pair_raises(tmp_path, monkeypatch):
     with pytest.raises(NoValidPair):
         s1_acquire.stage_s1(ctx)
     assert "error" in json.loads(ctx.path("pairs").read_text(encoding="utf-8"))
+
+
+def test_fast_mode_speckle_filters_every_scene_and_band(tmp_path, fake, monkeypatch):
+    """P2 finding #1 (P2_HANDOFF.md): the model needs Lee-Sigma-filtered input like Kuro Siwo, so the fast
+    backend must filter post + every pre scene, VV and VH, with the Kuro Siwo parameters."""
+    from cutoff.geo import speckle
+
+    calls = []
+    real = speckle.lee_sigma
+    monkeypatch.setattr(speckle, "lee_sigma", lambda b, **kw: calls.append(kw) or real(b, **kw))
+    s1_acquire.stage_s1(make_ctx(tmp_path))
+    assert len(calls) == 2 * 4                       # (post + 3 pre) x (VV, VH)
+    assert all(kw == {"window": 7, "target": 3, "sigma": 0.9, "looks": 4.4} for kw in calls)
