@@ -141,6 +141,22 @@ def test_gating_s2_upgrade_and_downgrade():
     assert cls[0, 2] == 1                                       # not downgraded: radar saw a decrease
 
 
+def test_gating_permanent_water_contradicted_by_clear_s2_is_dropped():
+    """Rule 5 extension: class 5 where clear-sky S2 sees no water is not permanent water (dry sand and smooth
+    soil look dark to radar like water, e.g. Deir ez-Zor desert). Without S2 data the radar call stays."""
+    probs, dist, slope, hand, sh = _inputs()
+    for c in range(4):
+        _set(probs, 0, c, [0.1, 0.8, 0.1])                      # permanent by the model
+    dist[0, 3] = 1                                              # ... with a radar decrease underneath
+    water = np.zeros((10, 10), np.uint8); water[0, 0] = 1
+    clear = np.ones((10, 10), np.uint8); clear[0, 2] = 0; clear[5:] = 255
+    _set(probs, 6, 0, [0.1, 0.8, 0.1])                          # bottom half: no S2 data
+    cls, flags = gate(probs, dist, slope, hand, sh, s2_water=water, s2_clear=clear)
+    assert cls[0, :4].tolist() == [5, 0, 5, 3]  # S2 water -> 5; S2 clear dry -> 0; cloudy -> 5; dry -> rule 3
+    assert cls[6, 0] == 5
+    assert flags[0, 1] & Flag.S2_CLEAR_NO_WATER
+
+
 def test_stable_steep_fpr():
     cls = np.array([[1, 0, 2, 254]], np.uint8)
     slope = np.array([[30, 30, 30, 30]], np.float32); hand = np.array([[200, 200, 200, 200]], np.float32)
