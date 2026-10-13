@@ -3,8 +3,8 @@
 Status on 2026-10-13 (night). ✅ done and verified · ⚠️ done, with a finding or deviation to review · ⬜ remaining.
 Evidence is in the task reports `P1.0.md` … `P1.8.md`, the change log `P1_UPDATES_LOG.md`, and `docs/results/`.
 
-**Summary: 42 of 44 items done** (6 of them flagged ⚠️ for a team decision). **2 remaining:** the team-Drive upload
-of `cache/`, and the hand-off that depends on it. Plus process items: open and merge 3 PRs, post the status board.
+**Summary: P1 COMPLETE — all code merged on `main` (PRs #13–#23).** Only the team-Drive upload of `cache/` remains
+(external step; data exists on the P1 machine). All 3 follow-up PRs merged 2026-10-13 evening.
 
 ## P1.0 Setup and recon
 | # | Plan item | Status | Evidence |
@@ -87,15 +87,15 @@ of `cache/`, and the hand-off that depends on it. Plus process items: open and m
 ## Hand-offs
 | # | Plan item | Status | Evidence |
 |---|---|---|---|
-| H1 | To P2: `cache/trishuli_north` (real s1 + terrain), integration only, no tuning on Trishuli | ⬜ | The data exists on the P1 machine; P2 receives it with the Drive upload (8.4). P2's real-data check was effectively run in E5 |
-| H2 | To P4: working `stage_s1` + `stage_terrain` in fast mode; cached mode for all three AOIs | ✅ | Code on `main` + follow-ups; cached mode works locally (P4 needs the cache copy, as in 8.4) |
+| H1 | To P2: `cache/trishuli_north` (real s1 + terrain), integration only, no tuning on Trishuli | ⚠️ | Data on P1 machine; P2's real-data check done via E5 (E5.md); Drive upload (8.4) still pending |
+| H2 | To P4: working `stage_s1` + `stage_terrain` in fast mode; cached mode for all three AOIs | ✅ | All code on `main` (`96c7eeb`); cached mode works locally (P4 needs the Drive cache copy) |
 
 ## Process (playbook)
 | Item | Status | Note |
 |---|---|---|
 | PRs #13–#21 merged, CI green | ✅ | |
-| Open + merge the follow-up PRs in order: `p1/P1-review-followups` → `p1/P1.7-snap14-gpt-check` → `p1/P1.8-real-runs` | ⬜ | The agent cannot open PRs here (no `gh`, GitKraken needs sign-in) |
-| Post the status-board lines (`P1_HANDOFF.md`) in the pinned issue | ⬜ | Same reason |
+| Open + merge the follow-up PRs in order: `p1/P1-review-followups` → `p1/P1.7-snap14-gpt-check` → `p1/P1.8-real-runs` | ✅ | Merged 2026-10-13 evening (PRs #22 and #23 on GitHub; `main` now at `96c7eeb`) |
+| Post the status-board lines (`P1_HANDOFF.md`) in the pinned issue | ⬜ | Pending manual post on GitHub |
 
 ## Team decisions requested (from the ⚠️ items)
 1. **S2 after-event rule:** keep `s2.require_after_event: true`? (P2/P4)
