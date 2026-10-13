@@ -51,15 +51,16 @@ def find_gpt() -> str:
 
 def cdse_token(cfg: dict | None = None) -> str:
     """Access token for the CDSE download service (password grant, public client `cdse-public`)."""
-    from cutoff.data.sentinelhub import env
+    from cutoff.data import sentinelhub
 
+    env = sentinelhub.env
     user, pwd = env("CDSE_USERNAME"), env("CDSE_PASSWORD")
     if not (user and pwd):
         raise MissingCDSELogin("CDSE login missing: set CDSE_USERNAME and CDSE_PASSWORD in .env")
     url = ((cfg or {}).get("s1", {}).get("sentinelhub", {}).get("token_url")) or CDSE_TOKEN_URL
     r = requests.post(url, data={"grant_type": "password", "client_id": "cdse-public", "username": user,
                                  "password": pwd}, timeout=60)
-    r.raise_for_status()
+    sentinelhub.raise_for_login(r, "CDSE login (CDSE_USERNAME / CDSE_PASSWORD)")
     return r.json()["access_token"]
 
 

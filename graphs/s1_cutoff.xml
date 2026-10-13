@@ -10,6 +10,8 @@
        10 m, saveLocalIncidenceAngle=true. sourceBands=Sigma0_VV,Sigma0_VH fixes the output band order
        (VV, VH, localIncidenceAngle) because the GeoTIFF writer keeps no band names.
     4. Speckle-Filter as in Kuro Siwo: Lee Sigma, window 7x7, target 3x3, sigma 0.9 (unchanged).
+  SNAP 14 compatibility (2026-10-13): Subset's empty <tiePointGridNames/> renamed to <tiePointGrids/> (the SNAP 14
+  name; empty = all grids, same meaning). Checked on SNAP 14.0.0 with the check-gpt option of cutoff.data.snap.
   Parameter names checked against the SNAP operator source (RangeDopplerGeocodingOp, SpeckleFilterOp,
   Copernicus30mElevationModelDescriptor) - see docs/plan/reports/P1.7.md.
   Run: gpt s1_cutoff.xml -Pinput=<S1 zip> -Poutput=<out.tif> -PgeoRegion="POLYGON((...))" -PmapProjection=EPSG:32645
@@ -50,7 +52,7 @@
       <subSamplingX>1</subSamplingX>
       <subSamplingY>1</subSamplingY>
       <fullSwath>false</fullSwath>
-      <tiePointGridNames/>
+      <tiePointGrids/>
       <copyMetadata>true</copyMetadata>
     </parameters>
   </node>

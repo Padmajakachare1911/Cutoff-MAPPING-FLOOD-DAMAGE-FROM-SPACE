@@ -5,6 +5,56 @@ Newest first. Status lines and hand-offs are in `P1_HANDOFF.md`.
 
 ---
 
+## 2026-10-13 (later) — credentials provided, SNAP installed (branch `p1/P1.7-snap14-gpt-check`)
+
+### Starting point
+- The user provided the Sentinel Hub OAuth client and the CDSE login, and installed ESA SNAP. `git fetch`: no new
+  commits on `origin/main`; `p1/P1-review-followups` is not merged yet, so this branch is stacked on it.
+- The credentials were written to the git-ignored `.env` only (`git check-ignore` → `.gitignore:13:*.env`). They
+  appear in no commit, report or log.
+
+### U6 — SNAP 14.0.0 verified; one Subset parameter renamed for SNAP 14
+- **What:** `python -m cutoff.data.snap --check-gpt` on the installed SNAP (`SNAP Release version 14.0.0`, Java 21,
+  11 GB max memory). First run: every parameter known except Subset `tiePointGridNames`. `gpt Subset -h` on SNAP 14
+  lists `-PtiePointGrids` instead. The graph's empty `<tiePointGridNames/>` (copied unchanged from Kuro Siwo) was
+  renamed to `<tiePointGrids/>` and noted in the graph header. Second run: `ok: true` for all 7 operators.
+- **Why:** this closes the plan's open [U] item (P1.7: "check the exact parameter names with `gpt ... -h`"). An empty
+  element means "all tie-point grids" under either name, so the processing is unchanged. The rename only removes the
+  risk that SNAP 14 rejects or ignores an unknown parameter. A test with a missing input file could not tell which
+  (SNAP stops at the Read node first), so the safe rename was made.
+- **Also confirmed from `gpt Terrain-Correction -h`:** `demName` defaults to 'Copernicus 30m Global DEM';
+  `saveLocalIncidenceAngle` and `mapProjection` exist.
+- **Where:** `graphs/s1_cutoff.xml`, `docs/plan/reports/P1.7.md`.
+- **Checked:** `test_live_gpt_knows_every_graph_parameter` (`@slow`) now runs and passes. The graph-content tests
+  still pass.
+
+### U7 — rejected logins now say why
+- **What:** `sentinelhub.LoginRejected` + `raise_for_login()`. `get_token` (Sentinel Hub OAuth client) and
+  `snap.cdse_token` (CDSE login) now raise it with CDSE's own `error` / `error_description` instead of a bare
+  `400/401 Bad Request`. The secret or password is never included.
+- **Why:** with the provided credentials both logins failed. The bare HTTP error hid the reason, which is what the
+  user needs to fix the account.
+- **Where:** `src/cutoff/data/sentinelhub.py`, `src/cutoff/data/snap.py`, `tests/test_p1_sentinelhub.py`,
+  `tests/test_p1_snap.py`.
+- **Checked:** two new offline tests (server reason shown, secret absent) went red, then green. With the real
+  credentials:
+  ```
+  LoginRejected: Sentinel Hub OAuth client (SH_CLIENT_ID / SH_CLIENT_SECRET) rejected by CDSE (HTTP 401): invalid_client - Invalid client or Invalid client credentials
+  LoginRejected: CDSE login (CDSE_USERNAME / CDSE_PASSWORD) rejected by CDSE (HTTP 400): invalid_grant - Account is not fully set up
+  ```
+
+### Still blocked (user action), unchanged scope
+The real S1/S2 runs (P1.3 live test, P1.4 Trishuli run + quick-look, P1.6, the three AOI caches, E5, E3c, the Drive
+upload) all need a working login. The fixes are in `P1_HANDOFF.md` → "Credentials".
+
+### Test summary
+```
+python -m pytest -m "not network and not gpu" -p no:warnings
+115 passed, 4 deselected      (the live SNAP parameter check now runs and passes)
+```
+
+---
+
 ## 2026-10-13 — review follow-ups (branch `p1/P1-review-followups`)
 
 ### Starting point

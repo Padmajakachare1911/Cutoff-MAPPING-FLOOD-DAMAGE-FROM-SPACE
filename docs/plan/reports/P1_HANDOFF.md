@@ -5,7 +5,8 @@ list is in `docs/plan/01_P1_data_sar.md`; per-task details are in `P1.0.md` … 
 merge is in `P1_UPDATES_LOG.md`.
 
 **Status (2026-10-13): all P1 code is merged on `main`** (PRs #13–#21, CI green). Everything that needs real Sentinel-1/-2
-data is **BLOCKED on credentials** (no `.env` on the P1 machine) and, for full mode, on an ESA SNAP install.
+data is **BLOCKED on credentials**. Since 2026-10-13 `.env` is filled and SNAP 14.0.0 is installed and verified, but
+CDSE rejects both logins (see "Credentials" below).
 
 ## Status board (playbook §5; copy these lines to the pinned "Status board" issue)
 ```
@@ -16,9 +17,10 @@ P1.3 Sentinel Hub backend      | code done (#16)    | blocker: live test needs S
 P1.4 stage_s1 + cache_aoi      | code done (#18)    | blocker: real Trishuli run needs SH credentials
 P1.5 terrain stage             | done (#17), real Trishuli run verified | blocker: none
 P1.6 Sentinel-2 stage          | code done (#19)    | blocker: SH credentials
-P1.7 SNAP full mode            | code done (#20)    | blocker: SNAP install + CDSE login
+P1.7 SNAP full mode            | code done (#20), SNAP 14 params verified | blocker: CDSE login rejected (account setup)
 P1.8 demo AOIs + E3c/E5        | terrain cached for 3 AOIs (#21) | blocker: SH credentials (s1/s2 cache, E5), + SNAP (E3c)
 P1 review follow-ups           | PR p1/P1-review-followups | blocker: none
+P1 SNAP 14 check + login errors| PR p1/P1.7-snap14-gpt-check (on top of the follow-ups) | blocker: none
 ```
 
 ## Findings for other streams (IMPORTANT)
@@ -42,6 +44,18 @@ P1 review follow-ups           | PR p1/P1-review-followups | blocker: none
 6. **Everyone: Deir ez-Zor is a flat floodplain.** It has no HAND > 100 m terrain, so P2's D9 fallback (HAND > 60 m →
    all valid pixels, with a warning) will apply there. That is expected, not a bug.
 
+## Credentials (2026-10-13)
+`.env` holds `SH_CLIENT_ID`, `SH_CLIENT_SECRET`, `CDSE_USERNAME` and `CDSE_PASSWORD`. It is git-ignored and never
+committed. CDSE's identity server refuses both:
+
+| Login | Server answer | What fixes it |
+|---|---|---|
+| Sentinel Hub OAuth client | `401 invalid_client - Invalid client or Invalid client credentials` | The client ID/secret pair is not valid on CDSE: the secret was mistyped or regenerated, the client expired, or it was created on commercial Sentinel Hub instead of CDSE. Create a new OAuth client at https://shapps.dataspace.copernicus.eu/dashboard → User settings → OAuth clients, copy the secret when it is shown (only once), and put both in `.env`. |
+| CDSE account (download) | `400 invalid_grant - Account is not fully set up` | Keycloak has a pending required action on the account: email verification, accepting the terms, or completing the profile. Log in once at https://dataspace.copernicus.eu in a browser and finish every step it asks for. |
+
+Check from the repo (prints the server's reason, never the secret):
+`python -c "import yaml; from cutoff.data import sentinelhub as sh, snap; c=yaml.safe_load(open('configs/default.yaml')); print(sh.get_token(*sh.sh_credentials(), c['s1']['sentinelhub']['token_url'])[:8], snap.cdse_token(c)[:8])"`
+
 ## What exists on the P1 machine (git-ignored)
 - `cache/trishuli_north`, `cache/trishuli_south`, `cache/deir_ez_zor`: `grid.json`, `pairs.json`,
   `dem/slope/hand/flwdir_d8.tif`, `run.log`, `stage_returns.json`.
@@ -50,8 +64,8 @@ P1 review follow-ups           | PR p1/P1-review-followups | blocker: none
 - No S1 or S2 rasters yet.
 
 ## How to resume (in order)
-1. Fill `.env`: `SH_CLIENT_ID`, `SH_CLIENT_SECRET`; for full mode also `CDSE_USERNAME`, `CDSE_PASSWORD`. Install ESA
-   SNAP ≥ 10, then run `python -m cutoff.data.snap --check-gpt` (exit 0 = all graph parameters known).
+1. Fix the two logins ("Credentials" above) so the check command prints two token prefixes. SNAP is done: SNAP 14.0.0,
+   `python -m cutoff.data.snap --check-gpt` → `ok: true`.
 2. `python -m pytest -m network -rs`: the live Sentinel Hub chunk test and the STAC/DEM tests.
 3. Rerun the three `scripts/cache_aoi.py` commands in `P1.8.md`; the terrain and STAC caches are reused.
 4. Add the `run.log` excerpt and the VV dB pre/post quick-look to `P1.4.md`.

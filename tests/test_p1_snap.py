@@ -249,3 +249,20 @@ def test_live_gpt_knows_every_graph_parameter():
         pytest.skip(str(e))
     rep = snap.check_gpt_params(gpt=gpt)
     assert rep["ok"], rep
+
+
+def test_rejected_cdse_login_reports_server_reason_without_password(monkeypatch):
+    from cutoff.data import sentinelhub as sh
+
+    class Resp:
+        status_code = 400
+        headers = {"content-type": "application/json"}
+
+        def json(self):
+            return {"error": "invalid_grant", "error_description": "Account is not fully set up"}
+
+    monkeypatch.setattr(sh, "env", lambda k: {"CDSE_USERNAME": "u@x", "CDSE_PASSWORD": "P@ss#1"}[k])
+    monkeypatch.setattr(snap.requests, "post", lambda *a, **k: Resp())
+    with pytest.raises(sh.LoginRejected, match="Account is not fully set up") as ei:
+        snap.cdse_token(CFG)
+    assert "P@ss#1" not in str(ei.value)
