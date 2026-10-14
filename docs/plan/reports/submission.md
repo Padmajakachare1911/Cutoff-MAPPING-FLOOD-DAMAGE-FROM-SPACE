@@ -1,7 +1,7 @@
 # Submission checklist - checked 14 October 2026
 
-P4's independent implementation is delivered. The user assigns the underlying
-data-integrity fix to the teammate and explicitly defers the demo video. This
+P4's independent implementation is delivered. The OSM integrity repair is now
+included in the v1 submission integration; P4's recorded video deferral remains. This
 checklist separates delivered product work from competition evidence still needed;
 it does not certify the entire project ready for submission.
 
@@ -30,7 +30,7 @@ it does not certify the entire project ready for submission.
 
 ## Team / data / final submission gates still open
 
-- [ ] Underlying OSM cache provenance fixed by teammate (#25; user says evening).
+- [x] Underlying OSM cache identity fixed in the integration: exact UTC date/AOI/buffer/filters; other-date fallback removed (#25). No actual missing OSM data is claimed acquired.
 - [ ] Ohsome v2 key or verified dated **15 km buffered** OSM caches available (#31).
 - [x] This laptop's Sentinel Hub OAuth client/secret authenticated during the 14 October integration audit. Other teammates still need their own working credentials.
 - [ ] Complete real fast-mode Trishuli + non-Trishuli runs, exposure/access and fresh-clone case study verified.

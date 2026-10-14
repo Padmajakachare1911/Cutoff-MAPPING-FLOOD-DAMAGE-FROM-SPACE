@@ -1,7 +1,9 @@
 """Pre-event OpenStreetMap extraction through ohsome (v2, then v1/cache)."""
 from __future__ import annotations
 
+import hashlib
 import io
+import json
 import os
 import time
 from datetime import UTC, datetime
@@ -141,7 +143,7 @@ def _read_v2(content: bytes) -> gpd.GeoDataFrame:
 
 
 def _request_v2(aoi, layer: str, snapshot_iso: str, cfg: dict[str, Any]) -> gpd.GeoDataFrame:
-    base = str(cfg.get("api_v2", "https://api.heigit.org/ohsome-api/v2-rc")).rstrip("/")
+    base = str(cfg.get("api_v2", "https://api.heigit.org/ohsome-api/v2")).rstrip("/")
     key = os.environ.get("OHSOME_API_KEY", "")
     if not key:
         raise RuntimeError("OHSOME_API_KEY is required for ohsome API v2")
@@ -221,14 +223,21 @@ def _snapshot_slug(snapshot_iso: str) -> str:
     from one snapshot date can never silently bleed into a run that uses a
     different snapshot date (fixes #25).
     """
-    # Replace characters that are unsafe on Windows/Linux (':') and keep it short.
-    return snapshot_iso.strip().replace(":", "").replace("+", "").replace(" ", "T")[:17]
+    return _utc(snapshot_iso).isoformat().replace("+00:00", "Z").replace(":", "")
 
 
 def _cache_dir(ctx: RunContext) -> Path:
     from cutoff.data.s1_acquire import cache_root, grid_hash
 
-    return cache_root(ctx) / "osm" / grid_hash(ctx.grid) / _snapshot_slug(ctx.osm_snapshot)
+    # A grid alone does not identify the buffered routing query. Bind the
+    # requested AOI, routing coverage and filters as well as the exact date.
+    profile = {
+        "aoi_bbox": list(ctx.aoi_bbox),
+        "access_buffer_km": float(ctx.cfg.get("access", {}).get("access_buffer_km", 15)),
+        "filters": LAYERS,
+    }
+    digest = hashlib.sha256(json.dumps(profile, sort_keys=True).encode()).hexdigest()[:16]
+    return cache_root(ctx) / "osm" / grid_hash(ctx.grid) / _snapshot_slug(ctx.osm_snapshot) / digest
 
 
 def stage_osm(ctx: RunContext) -> dict:
@@ -261,31 +270,11 @@ def stage_osm(ctx: RunContext) -> dict:
             frame = frame.drop_duplicates("osm_id").reset_index(drop=True)
             frame.to_parquet(cache_path)
         except Exception as exc:
-            if cache_path.exists():
-                # Same-snapshot cache is available — use it.
-                ctx.warn(STAGE, f"ohsome unavailable for {layer}; using cached pre-event OSM: {exc}")
-                frame = gpd.read_parquet(cache_path)
-                apis.add("cache")
-            else:
-                # No same-snapshot cache. Search for any parquet for this layer
-                # under the same grid hash (any snapshot date) as a last resort
-                # so that a live integration run is not blocked solely by API
-                # access issues (fixes #31).
-                from cutoff.data.s1_acquire import cache_root, grid_hash
-
-                grid_cache = cache_root(ctx) / "osm" / grid_hash(ctx.grid)
-                candidates = sorted(grid_cache.glob(f"*/{layer}.parquet"))
-                if not candidates:
-                    raise
-                fallback = candidates[-1]  # newest snapshot slug (lexicographic)
-                ctx.warn(
-                    STAGE,
-                    f"ohsome unavailable for {layer} and no same-snapshot cache exists; "
-                    f"falling back to stale cache {fallback} — snapshot date MAY NOT MATCH "
-                    f"'{ctx.osm_snapshot}'. Re-run with a valid OHSOME_API_KEY to refresh: {exc}",
-                )
-                frame = gpd.read_parquet(fallback)
-                apis.add("cache")
+            if not cache_path.exists():
+                raise
+            ctx.warn(STAGE, f"ohsome unavailable for {layer}; using matching cached pre-event OSM: {exc}")
+            frame = gpd.read_parquet(cache_path)
+            apis.add("cache")
         frame = frame.to_crs(ctx.grid.crs)
         frame.to_file(ctx.path(f"osm_{layer}"), driver="GPKG")
         counts[layer] = len(frame)

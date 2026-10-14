@@ -172,10 +172,9 @@ def _make_minimal_roads_frame() -> gpd.GeoDataFrame:
     return frame
 
 
-def test_stage_osm_falls_back_to_stale_snapshot_cache_when_apis_fail(tmp_path, monkeypatch):
-    """When both v2 and v1 fail and no same-snapshot cache exists, stage_osm must
-    fall back to any parquet in an older snapshot sub-directory rather than raising (fix #31).
-    """
+@pytest.mark.parametrize('other_snapshot', ['2026-06-01T00:00:00Z', '2026-09-01T00:00:00Z'])
+def test_stage_osm_rejects_other_snapshot_cache_when_apis_fail(tmp_path, monkeypatch, other_snapshot):
+    """An API failure cannot change source dates, including to post-event data."""
     run_dir = make_mock_run(tmp_path / "mock")
     cfg = yaml.safe_load((Path(__file__).parents[1] / "configs" / "default.yaml").read_text())
     cfg["run"]["cache_dir"] = str(tmp_path / "cache")
@@ -186,7 +185,7 @@ def test_stage_osm_falls_back_to_stale_snapshot_cache_when_apis_fail(tmp_path, m
     from cutoff.data.s1_acquire import cache_root, grid_hash
     from cutoff.data.osm import _snapshot_slug
 
-    stale_slug = _snapshot_slug("2026-06-01T00:00:00Z")
+    stale_slug = _snapshot_slug(other_snapshot)
     grid_cache = Path(cfg["run"]["cache_dir"]) / "osm" / grid_hash(grid)
     stale_dir = grid_cache / stale_slug
     stale_dir.mkdir(parents=True, exist_ok=True)
@@ -213,10 +212,49 @@ def test_stage_osm_falls_back_to_stale_snapshot_cache_when_apis_fail(tmp_path, m
     ctx = RunContext(run_dir, "mock", MOCK_BBOX, EVENT, "2026-07-27T00:00:00Z", "fast", cfg, grid)
     monkeypatch.setattr(ctx, "warn", lambda _stage, msg: warnings.append(msg))
 
-    # Should NOT raise; should fall back to stale cache.
-    result = stage_osm(ctx)
+    with pytest.raises(RuntimeError, match='API unavailable'):
+        stage_osm(ctx)
+    assert not any('MAY NOT MATCH' in w for w in warnings)
 
-    assert result["osm_api"] == "cache"
-    assert result["counts"]["roads"] >= 1
-    # At least one warning must mention the stale-snapshot fallback.
-    assert any("MAY NOT MATCH" in w for w in warnings), f"Expected stale-cache warning, got: {warnings}"
+
+def test_cache_dir_normalizes_offsets_and_preserves_distinct_times(tmp_path):
+    from cutoff.data.osm import _cache_dir
+    run = make_mock_run(tmp_path / 'mock')
+    cfg = yaml.safe_load((Path(__file__).parents[1] / 'configs/default.yaml').read_text())
+    cfg['run']['cache_dir'] = str(tmp_path / 'cache')
+    grid = Grid.from_json(run / 'grid.json')
+    def ctx(snapshot):
+        return RunContext(run, 'mock', MOCK_BBOX, EVENT, snapshot, 'cached', cfg, grid)
+    assert _cache_dir(ctx('2026-07-27T00:00:00+05:30')) != _cache_dir(ctx('2026-07-27T00:00:00+04:30'))
+    assert _cache_dir(ctx('2026-07-27T00:00:00+05:30')) == _cache_dir(ctx('2026-07-26T18:30:00Z'))
+    assert _cache_dir(ctx('2026-07-27T00:00:00.1Z')) != _cache_dir(ctx('2026-07-27T00:00:00.2Z'))
+
+
+def test_cache_dir_changes_with_routing_coverage(tmp_path):
+    import copy
+    from cutoff.data.osm import _cache_dir
+    run = make_mock_run(tmp_path / 'mock')
+    cfg = yaml.safe_load((Path(__file__).parents[1] / 'configs/default.yaml').read_text())
+    cfg['run']['cache_dir'] = str(tmp_path / 'cache')
+    cfg2 = copy.deepcopy(cfg)
+    cfg2['access']['access_buffer_km'] = cfg['access']['access_buffer_km'] + 1
+    grid = Grid.from_json(run / 'grid.json')
+    a = RunContext(run, 'mock', MOCK_BBOX, EVENT, '2026-07-27T00:00:00Z', 'cached', cfg, grid)
+    b = RunContext(run, 'mock', MOCK_BBOX, EVENT, '2026-07-27T00:00:00Z', 'cached', cfg2, grid)
+    assert _cache_dir(a) != _cache_dir(b)
+
+
+def test_stage_osm_reuses_only_matching_cache(tmp_path):
+    from cutoff.data.osm import _cache_dir
+    run = make_mock_run(tmp_path / 'mock')
+    cfg = yaml.safe_load((Path(__file__).parents[1] / 'configs/default.yaml').read_text())
+    cfg['run']['cache_dir'] = str(tmp_path / 'cache')
+    ctx = RunContext(run, 'mock', MOCK_BBOX, EVENT, '2026-07-27T00:00:00Z', 'cached', cfg,
+                     Grid.from_json(run / 'grid.json'))
+    cache = _cache_dir(ctx)
+    cache.mkdir(parents=True)
+    for layer in ['roads', 'buildings', 'places', 'health']:
+        gpd.read_file(ctx.path('osm_' + layer)).to_crs(4326).to_parquet(cache / (layer + '.parquet'))
+    result = stage_osm(ctx)
+    assert result['osm_api'] == 'cache' and result['osm_snapshot'] == ctx.osm_snapshot
+    validate_run_dir(run, keys=['osm_roads', 'osm_buildings', 'osm_places', 'osm_health'])

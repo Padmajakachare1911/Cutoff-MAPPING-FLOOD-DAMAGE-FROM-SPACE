@@ -48,7 +48,7 @@ Layer filters (agreed):
 | places | `place in (city, town, village, hamlet, isolated_dwelling, locality) and geometry:point` | — |
 | health | `amenity in (hospital, clinic, doctors) or healthcare in (hospital, clinic, centre, doctor) or healthcare=* and geometry:point` | polygons → centroids; `kind` from the tags (health posts map to `health_post`) |
 
-- [ ] v2 first. On HTTP error, retry with backoff ×3, then try v1 (same filter, `bboxes`, `properties=tags`). If that fails too, use a cached copy from `cache/osm/<grid_hash>/<layer>.parquet` with `ctx.warn`. If there's no cache either, raise; the pipeline then marks the run partial.
+- [ ] v2 first. On HTTP error, retry with backoff ×3, then try v1 (same filter, `bboxes`, `properties=tags`). If that fails too, use only a matching cached copy from `cache/osm/<grid_hash>/<canonical_UTC_snapshot>/<AOI_buffer_filter_hash>/<layer>.parquet` with `ctx.warn`. Do not substitute another date or routing extent. If there is no matching cache, raise; the pipeline then marks the run partial.
 - [ ] **Access extent:** fetch roads, places and health for the AOI **buffered by `cfg.access.access_buffer_km` (15 km)**, because a village's nearest hospital or town and the roads to it are often outside the hazard AOI. Fetch buildings for the AOI only. Hazard is known only inside the AOI, so roads outside it are assumed open; state that in the results limitations.
 - [ ] Tile requests larger than `cfg.osm.tile_deg` (0.1°), dedupe by OSM id, reproject to the grid CRS, and write the four GPKGs with the contract columns (`osm_id` as `"way/123"`, etc.). Vectors may extend beyond the raster grid; only their CRS must match.
 - [ ] Return `{"osm_snapshot", "osm_api", "counts"}`.
