@@ -99,6 +99,22 @@ def test_fetch_layer_falls_back_to_v1_after_three_v2_503s(monkeypatch):
     assert got.loc[0, "tier"] == "track"
 
 
+@pytest.mark.parametrize('retry_after,minimum', [(None, 60), ('90', 90)])
+def test_v2_rate_limit_waits_for_sliding_window_before_retry(monkeypatch, retry_after, minimum):
+    waits = []
+    statuses = iter([429, 200])
+    def post(url, **kwargs):
+        status = next(statuses)
+        headers = {'retry-after': retry_after} if retry_after else {}
+        return httpx.Response(status, request=httpx.Request('POST', url), headers=headers)
+    monkeypatch.setenv('OHSOME_API_KEY', 'test-key')
+    monkeypatch.setattr(osm.httpx, 'post', post)
+    monkeypatch.setattr(osm.time, 'sleep', waits.append)
+    monkeypatch.setattr(osm, '_read_v2', lambda _: gpd.GeoDataFrame(geometry=[], crs=4326))
+    osm._request_v2(box(0, 0, 1, 1), 'roads', '2026-07-27T00:00:00Z', {})
+    assert waits and waits[0] >= minimum
+
+
 def test_stage_osm_tiles_deduplicates_and_validates_outputs(tmp_path, monkeypatch):
     run_dir = make_mock_run(tmp_path / "mock")
     cfg = yaml.safe_load((Path(__file__).parents[1] / "configs" / "default.yaml").read_text())
@@ -257,4 +273,5 @@ def test_stage_osm_reuses_only_matching_cache(tmp_path):
         gpd.read_file(ctx.path('osm_' + layer)).to_crs(4326).to_parquet(cache / (layer + '.parquet'))
     result = stage_osm(ctx)
     assert result['osm_api'] == 'cache' and result['osm_snapshot'] == ctx.osm_snapshot
+    assert not ctx.warnings  # intentional offline reuse is not an API outage
     validate_run_dir(run, keys=['osm_roads', 'osm_buildings', 'osm_places', 'osm_health'])

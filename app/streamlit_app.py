@@ -37,6 +37,10 @@ def tail_log(root):
     return []
 
 
+def remember_run():
+    st.session_state['selected_run_path'] = st.session_state['run_history']
+
+
 def launch(bbox, event, mode, model, snapshot, output, cache_dir):
     run_id = f'{datetime.now(UTC):%Y%m%dT%H%M%S}_{uuid.uuid4().hex[:8]}'
     command = [sys.executable, '-m', 'cutoff.cli', 'run', '--bbox', bbox, '--event', event,
@@ -70,7 +74,8 @@ def progress():
         else:
             st.error(Path(st.session_state['active_console']).read_text(encoding='utf-8')[-2500:])
         del st.session_state['active_process']
-        st.session_state['run_history'] = str(root)
+        # Apply the selection on the next full run, before creating the widget.
+        st.session_state['pending_run_history'] = str(root)
         st.rerun()
 
 
@@ -127,8 +132,17 @@ def main():
         history = sorted([p for p in output.glob('*') if p.is_dir() and
                           ((p / 'results.json').exists() or (p / 'error.json').exists())],
                          key=lambda p: p.stat().st_mtime, reverse=True)
-        chosen = st.selectbox('Run history', [str(p) for p in history],
-                              format_func=lambda path: Path(path).name, key='run_history') if history else None
+        pending = st.session_state.pop('pending_run_history', None)
+        options = [str(path) for path in history]
+        if pending in options:
+            st.session_state['selected_run_path'] = pending
+        remembered = st.session_state.get('selected_run_path')
+        index = options.index(remembered) if remembered in options else 0
+        chosen = st.selectbox('Run history', options, index=index,
+                              format_func=lambda path: Path(path).name, key='run_history',
+                              on_change=remember_run) if history else None
+        if chosen:
+            st.session_state['selected_run_path'] = chosen
         scenario = st.radio('Scenario', ['A', 'B', 'C'], horizontal=True)
         st.caption(DISCLAIMER)
     if hasattr(st, 'fragment'):

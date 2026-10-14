@@ -34,6 +34,33 @@ def test_error_run_shows_pair_message(tmp_path, monkeypatch):
     assert any('Tracks seen: 85; next pass' in error.value for error in app.error)
 
 
+def test_completed_run_switches_history_without_widget_state_error(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    older = make_mock_run(tmp_path / 'older')
+    completed = make_mock_run(tmp_path / 'completed')
+    monkeypatch.setenv('CUTOFF_OUTPUT_DIR', str(tmp_path))
+    app = AppTest.from_file(str(APP), default_timeout=30).run()
+    history = next(item for item in app.selectbox if item.label == 'Run history')
+    history.set_value(str(older)).run()
+    app.session_state['active_process'] = SimpleNamespace(returncode=0, poll=lambda: 0)
+    app.session_state['active_root'] = str(completed)
+    app.run()
+    assert not app.exception
+    assert next(item.value for item in app.selectbox if item.label == 'Run history') == str(completed)
+
+
+def test_new_run_in_history_preserves_the_selected_result(tmp_path, monkeypatch):
+    selected = make_mock_run(tmp_path / 'selected')
+    make_mock_run(tmp_path / 'other')
+    monkeypatch.setenv('CUTOFF_OUTPUT_DIR', str(tmp_path))
+    app = AppTest.from_file(str(APP), default_timeout=30).run()
+    next(item for item in app.selectbox if item.label == 'Run history').set_value(str(selected)).run()
+    make_mock_run(tmp_path / 'arriving')
+    app.run()
+    assert not app.exception
+    assert next(item.value for item in app.selectbox if item.label == 'Run history') == str(selected)
+
+
 def test_raster_overlay_uses_mercator_and_masks_nodata(tmp_path):
     import importlib.util
 
