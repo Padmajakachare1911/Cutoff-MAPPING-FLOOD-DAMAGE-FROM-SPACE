@@ -10,10 +10,10 @@ dependencies:
   - gdal>=3.8
   - rasterio>=1.3.9
   - pyproj
-  - geopandas>=0.14
+  - geopandas>=1.0
   - shapely>=2
   - pyogrio
-  - pyarrow
+  - pyarrow>=26
   - networkx>=3.2
   - requests
   - httpx
