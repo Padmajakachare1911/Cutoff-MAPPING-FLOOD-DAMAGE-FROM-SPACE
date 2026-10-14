@@ -63,6 +63,19 @@ def test_error_run_is_returned(tmp_path):
     assert module.read_run("bad")["error"]["message"] == "Tracks seen: 85"
 
 
+def test_dashboard_and_missing_model_argument_default_to_v1(tmp_path, monkeypatch):
+    module = load_server(tmp_path)
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    checkpoint = tmp_path / "models" / "cutoff_unet_v1.pt"
+    checkpoint.parent.mkdir()
+    checkpoint.write_bytes(b"checkpoint-selection fixture")
+    args = module.validate_launch({"bbox": "85.28,28.10,85.42,28.29", "event": "2026-08-26T02:52:00Z"})
+    assert args[3] == str(checkpoint)
+    page = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+    assert 'id="checkpoint-option" checked' in page
+    assert 'value="b0" checked' not in page
+
+
 def test_raster_overlay_uses_mercator_and_masks_nodata(tmp_path):
     root = make_mock_run(tmp_path / "mock")
     path = ROOT / "app" / "map_layers.py"

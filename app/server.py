@@ -96,7 +96,7 @@ def validate_launch(payload: dict) -> list[str]:
     mode = str(payload.get("mode", "cached"))
     if mode not in {"cached", "fast", "full"}:
         raise ValueError("Mode must be cached, fast, or full")
-    model = str(payload.get("model", "b0"))
+    model = str(payload.get("model") or ROOT / "models" / "cutoff_unet_v1.pt")
     if model != "b0" and not Path(model).expanduser().is_file():
         raise ValueError("Download model-v1 or choose b0")
     cache = str(payload.get("cache", ROOT / "cache"))
