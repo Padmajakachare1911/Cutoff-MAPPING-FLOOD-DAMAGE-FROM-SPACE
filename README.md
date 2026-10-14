@@ -40,7 +40,9 @@ The synthetic demo verifies interfaces/product behaviour, not model accuracy.
 WeasyPrint automatically falls back to xhtml2pdf when native libraries are absent.
 The local dashboard at `http://127.0.0.1:8000` launches a CLI subprocess, tails stage logs, offers run history,
 scenario switching, map evidence popups, Results tables and downloads. No current
-basemap tiles are used as evidence. Trained inference requires the `ml` extra;
+basemap datasets are loaded. The 3D surface comes from the run's Copernicus DEM;
+pre/post radar, model score, optional S2 and hatched no-observation are selectable.
+Trained inference requires the `ml` extra;
 CPU torch/torchvision should come from the same [PyTorch index](https://pytorch.org/get-started/locally/).
 
 ## Run real case studies
@@ -66,6 +68,20 @@ refused to prevent snapshot leakage. A first fast run needs your `.env` Sentinel
 credentials and an ohsome key (v1 fallback). Existing scenes can satisfy fast mode;
 label those timings **warm cache**, not cold live acquisition.
 
+The dashboard loads the repository's private `.env` at startup. If your prepared
+cache and run archive are outside the repository, configure their actual paths:
+
+```dotenv
+CUTOFF_CACHE_DIR=C:/cutoff_data/cache
+CUTOFF_OUTPUT_DIR=C:/cutoff_data/dashboard_runs
+```
+
+Restart `python app/server.py` after changing these settings. Fast is the default
+and acquires missing inputs; Cached requires the exact AOI/event/OSM date already
+prepared. Only one analysis runs at a time. Failed historical attempts remain
+labelled failed; successful analyses get new IDs. Partial analyses preserve hazard
+evidence and explicitly report missing exposure/access.
+
 ```bash
 cutoff run --bbox 85.28,28.10,85.42,28.29 --event 2026-08-26T02:52:00Z \
   --mode fast --model models/cutoff_unet_v1.pt --run-id trishuli_north
@@ -80,7 +96,10 @@ with a warning. Existing run folders are never overwritten. Same-track acquisiti
 failure exits 2 and writes error.json. Optional S2 failure continues; OSM/access
 failure publishes a partial hazard report. `--stages` requires a dependency-complete
 subset; input-only subsets write summaries without Results. `--flowpath LON,LAT`
-needs network; cached mode warns/skips this current P3 implementation.
+uses a full source-centred two-degree Copernicus DEM at 30 m and pre-event places.
+Fast mode prepares those inputs; Cached reproduces the trace only when the exact
+expanded DEM and dated path-buffer places are available. The map never invents
+a downstream path from the shape of a hazard polygon.
 
 Full mode requires local ESA SNAP, CDSE login and SNAP_GPT; replace `--mode fast`
 with `--mode full`. Competition acceptance of fast processing/caches is
@@ -138,6 +157,8 @@ judging. Code: [MIT](LICENSE). Data retain their upstream licences.
 Completed v1 evidence/gating and P4 submission assets are integrated. V1 remains
 the default checkpoint; experimental v2 is excluded. Implementation is ahead of
 real-data acceptance: buffered, dated OSM and its direct-stage provenance fix,
-complete real runs, project freeze/E4, real E6 and final rehearsal remain pending.
+project freeze/E4, real E6 and final rehearsal remain pending. Real dashboard
+analyses with released v1 now pass for both presets; see
+[dashboard repair evidence](docs/plan/reports/P4_DASHBOARD_REPAIRS.md).
 See [master-plan task audit](docs/plan/reports/TEAM_REMAINING_WORK.md) and
 [submission checklist](docs/plan/reports/submission.md) for verified requirements.

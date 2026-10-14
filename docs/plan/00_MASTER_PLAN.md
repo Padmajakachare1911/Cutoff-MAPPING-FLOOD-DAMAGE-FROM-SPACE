@@ -4,7 +4,12 @@
 
 **Goal:** a system that takes any AOI + flood date and answers, from Sentinel-1/2, the Copernicus DEM and pre-event OSM: *where did the flood hit, what was exposed, who is cut off*. It produces a map dashboard and a one-page situation report, and is evaluated honestly on held-out floods and on the Trishuli 2026 event (EMSR927, check-only).
 
-**Architecture (one line per stage):** same-track Sentinel-1 pair from the CDSE STAC → calibrated σ⁰ on a 10 m UTM grid → U-Net (7 channels) + scene-adaptive change rule + terrain gating (+ optional S2) → hazard classes → pre-event OSM exposure → noded road graph with closure scenarios A/B/C → `results.json` → Streamlit dashboard + PDF sitrep.
+**Architecture (one line per stage):** same-track Sentinel-1 pair from the CDSE STAC → calibrated σ⁰ on a 10 m UTM grid → U-Net (7 channels) + scene-adaptive change rule + terrain gating (+ optional S2) → hazard classes → pre-event OSM exposure → noded road graph with closure scenarios A/B/C → `results.json` → local MapLibre dashboard + PDF sitrep.
+
+**UI implementation update (14 October 2026):** the user selected the new dashboard
+from PR #38 instead of Streamlit. `app/server.py` and `app/static/` implement P4.3's
+same feature requirements. Maps use run-local Sentinel layers and Copernicus DEM,
+with dated OSM vectors; no external imagery or terrain basemap datasets are loaded.
 
 **Tech stack:** Python 3.11, rasterio/GDAL, geopandas/shapely 2, pyflwdir, NetworkX, PyTorch + segmentation-models-pytorch, pystac-client, Sentinel Hub Process API on CDSE, ESA SNAP (full mode), ohsome API, Streamlit + folium, Jinja2 + WeasyPrint/xhtml2pdf, pydantic, pytest.
 

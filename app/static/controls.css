@@ -61,3 +61,6 @@
   .scenario-control { grid-template-columns: 1fr; }
   .scenario-control button { width: 100%; }
 }
+
+[hidden]{display:none!important}#provenance{overflow-wrap:anywhere}#provenance td:first-child{min-width:105px;overflow-wrap:normal}#limitations ul{padding-left:16px}#evaluation pre{white-space:pre-wrap;font-size:11px}.dot.partial{background:#ff9a00}
+.choice input:disabled+span{opacity:.4;cursor:not-allowed}

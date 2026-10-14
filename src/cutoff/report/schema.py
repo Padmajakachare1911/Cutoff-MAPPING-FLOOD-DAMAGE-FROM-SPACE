@@ -9,10 +9,18 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
-from cutoff.contracts import (ACCESS_STATUSES, ATTRIBUTION, CONTRACT_VERSION, DISCLAIMER,
-                              HAZARD_CLASS_NAMES, RUN_MODES, S1_BACKENDS, SCENARIOS)
+from cutoff.contracts import (
+    ACCESS_STATUSES,
+    ATTRIBUTION,
+    CONTRACT_VERSION,
+    DISCLAIMER,
+    HAZARD_CLASS_NAMES,
+    RUN_MODES,
+    S1_BACKENDS,
+    SCENARIOS,
+)
 
 _CLASS_NAMES = set(HAZARD_CLASS_NAMES.values())
 
@@ -56,6 +64,12 @@ class Hazard(BaseModel):
     temperature: float
     stable_steep_fpr: float | None = None   # share of steep, high-HAND pixels flagged as flood
 
+    @computed_field
+    @property
+    def total_hazard_km2(self) -> float:
+        return round(sum(self.area_km2_by_class.get(name, 0.0) for name in
+                         ("flood_high", "flood_possible", "rule_decrease", "rule_increase")), 4)
+
     @field_validator("area_km2_by_class")
     @classmethod
     def _known_classes(cls, v):
@@ -69,6 +83,11 @@ class Exposure(BaseModel):
     buildings_by_class: dict[str, int]
     road_km_by_class: dict[str, float]
     bridges_by_class: dict[str, int]
+
+    @computed_field
+    @property
+    def total_exposed_buildings(self) -> int:
+        return sum(self.buildings_by_class.values())
 
 
 class SettlementRef(BaseModel):
@@ -119,6 +138,11 @@ class Results(BaseModel):
     limitations: list[str]
     attribution: list[str] = Field(default_factory=lambda: list(ATTRIBUTION))
     disclaimer: str = DISCLAIMER
+
+    @computed_field
+    @property
+    def is_partial(self) -> bool:
+        return self.exposure is None or not self.access or any("Partial run" in w for w in self.warnings)
 
     @field_validator("attribution")
     @classmethod

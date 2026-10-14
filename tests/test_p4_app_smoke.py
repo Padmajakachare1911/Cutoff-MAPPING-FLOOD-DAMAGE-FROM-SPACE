@@ -36,6 +36,8 @@ def test_local_dashboard_serves_mock_scenarios_and_downloads(tmp_path):
         with urlopen(base + "/") as response:
             page = response.read().decode()
         assert "Cutoff" in page and "RUN ANALYSIS" in page
+        with urlopen(base + "/static/vendor/maplibre-gl.js") as response:
+            assert response.status == 200 and b"MapLibre" in response.read()
         assert get_json(base, "/api/runs")[0]["id"] == "demo_mock"
         payload = get_json(base, "/api/runs/demo_mock")
         assert payload["results"]["access"][0]["counts"]["cut_off"] == 2
@@ -44,7 +46,8 @@ def test_local_dashboard_serves_mock_scenarios_and_downloads(tmp_path):
         assert map_data["scenario"] == "B"
         assert map_data["vectors"]["settlements"]["features"]
         assert map_data["vectors"]["hazard_polygons"]["features"]
-        assert map_data["vectors"]["derived_flow"]["features"][0]["properties"]["direction"] == "downhill"
+        assert "derived_flow" not in map_data["vectors"]
+        assert {"hazard", "no_observation", "score", "pre", "post", "s2"} <= set(map_data["layers"])
         with urlopen(base + "/api/layers/demo_mock/hazard.png") as response:
             assert response.headers["Content-Type"] == "image/png"
             assert response.read(8) == b"\x89PNG\r\n\x1a\n"

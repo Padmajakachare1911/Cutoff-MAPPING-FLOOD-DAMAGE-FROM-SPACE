@@ -4,7 +4,7 @@
 
 **You deliver:** `cutoff run` / `pipeline.run`; `results.json` assembly; a one-page PDF sitrep; the Streamlit dashboard; `eval/emsr927.py` (E4) and the runtime table (E7); README, report (≤ 6 pages), video (≤ 3:00) and submission checklist.
 
-**Files you own:** `src/cutoff/{pipeline,cli}.py`, `src/cutoff/report/{sitrep.py,templates/sitrep.html.j2}`, `src/cutoff/mock.py`, `app/streamlit_app.py`, `eval/emsr927.py`, `docs/report/*`, `docs/results/E4.md`, `docs/results/E7.md`, `README.md`, `Makefile`, `environment.yml`, `pyproject.toml`, `.github/*`, `tests/test_p4_*.py`.
+**Files you own:** `src/cutoff/{pipeline,cli}.py`, `src/cutoff/report/{sitrep.py,templates/sitrep.html.j2}`, `src/cutoff/mock.py`, `app/server.py`, `app/static/`, `eval/emsr927.py`, `docs/report/*`, `docs/results/E4.md`, `docs/results/E7.md`, `README.md`, `Makefile`, `environment.yml`, `pyproject.toml`, `.github/*`, `tests/test_p4_*.py`.
 
 ---
 
@@ -62,7 +62,7 @@
   - a missing field raises (StrictUndefined).
 
 ### P4.3 Dashboard (T+6 → T+20)
-**File:** `app/streamlit_app.py` (+ `tests/test_p4_app_smoke.py` using `streamlit.testing.v1.AppTest`)
+**File:** `app/server.py`, `app/static/` (+ `tests/test_p4_app_smoke.py` using native-server tests and browser verification)
 Layout (blueprint §19.1):
 - **Sidebar:**
   - AOI bbox text input, event datetime, OSM snapshot (read-only default), and a mode selector (cached/fast/full);
@@ -71,7 +71,7 @@ Layout (blueprint §19.1):
   - a run history list;
   - a scenario radio A/B/C;
   - the disclaimer.
-- **Map (folium):**
+- **Map (MapLibre):**
   - hazard tiers as a PNG overlay reprojected to EPSG:3857, with a legend;
   - no-observation hatched;
   - an optional `p_flood` layer labelled "model score (calibrated on global floods)";

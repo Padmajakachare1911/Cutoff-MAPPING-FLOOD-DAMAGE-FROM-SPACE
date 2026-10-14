@@ -1,7 +1,9 @@
 """Trace a downstream path from Copernicus DEM and list nearby pre-event OSM places."""
 from __future__ import annotations
 
+import hashlib
 import math
+from dataclasses import replace
 
 import geopandas as gpd
 import numpy as np
@@ -56,13 +58,16 @@ def trace_flowpath(ctx: RunContext, lon: float, lat: float) -> dict:
     """Fetch a 30 m DEM around the source, write flowpath.gpkg, and return its summary."""
     from pyproj import Transformer
 
-    from cutoff.data.dem import dem_on_grid
+    from cutoff.data.dem import _cached_dem
+    from cutoff.data.osm import LAYERS, _snapshot_slug
+    from cutoff.data.s1_acquire import cache_root
 
     assert_pre_event(ctx.osm_snapshot, ctx.event_datetime)
     flow_cfg = ctx.cfg.get("flowpath", {})
     resolution = float(flow_cfg.get("dem_res_m", 30))
     search_grid = make_grid((lon - 1, lat - 1, lon + 1, lat + 1), res=resolution)
-    dem, search_grid = dem_on_grid(search_grid)
+    search_ctx = replace(ctx, grid=search_grid)
+    dem, search_grid = _cached_dem(search_ctx, buffer_m=0)
     transformer = Transformer.from_crs(4326, search_grid.crs, always_xy=True)
     start_x, start_y = transformer.transform(lon, lat)
     path = flowpath_from_dem(dem, search_grid, start_x, start_y,
@@ -74,11 +79,23 @@ def trace_flowpath(ctx: RunContext, lon: float, lat: float) -> dict:
 
     buffer_m = float(flow_cfg.get("settlement_buffer_m", 500))
     query_area = gpd.GeoSeries([path.buffer(buffer_m)], crs=search_grid.crs).to_crs(4326).iloc[0]
-    places = fetch_layer(query_area, "places", ctx.osm_snapshot, ctx.cfg).to_crs(search_grid.crs)
+    identity = hashlib.sha256((query_area.wkb_hex + LAYERS["places"]).encode()).hexdigest()[:20]
+    cache = cache_root(ctx) / "flowpath" / _snapshot_slug(ctx.osm_snapshot) / f"{identity}.parquet"
+    if cache.is_file():
+        places = gpd.read_parquet(cache)
+    elif ctx.mode == "cached":
+        raise FileNotFoundError("No matching dated places cache for this downstream trace; run in fast mode first")
+    else:
+        places = fetch_layer(query_area, "places", ctx.osm_snapshot, ctx.cfg)
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        places.to_parquet(cache)
+    places = places.to_crs(search_grid.crs)
     near = places.loc[places.geometry.distance(path) <= buffer_m]
     names = sorted({str(name) for name in near["name"] if name})
     result = {"start_lon": lon, "start_lat": lat, "length_km": round(path.length / 1000, 2),
               "settlements": names}
+    ctx.log(STAGE, event="coverage", search_bbox=search_grid.bounds_wgs84(), resolution_m=resolution,
+            max_length_km=float(flow_cfg.get("max_length_km", 150)))
     ctx.log(STAGE, event="complete", **result)
     return result
 

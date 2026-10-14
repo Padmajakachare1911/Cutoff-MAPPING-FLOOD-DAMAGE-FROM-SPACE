@@ -85,6 +85,15 @@ Each stage returns a dict; the pipeline (P4) maps it into `Results`:
 
 `area_km2_by_class` and the exposure dict keys use the lower-case `HazardClass` names (`flood_high`, `flood_possible`, `rule_decrease`, `rule_increase`, `permanent_water`, `no_obs`).
 
+Backward-compatible computed JSON fields (14 October 2026):
+- `hazard.total_hazard_km2`: sum of classes 1–4, rounded to four decimals;
+  permanent water and no observation are excluded.
+- `exposure.total_exposed_buildings`: sum of the existing exposed-building counts.
+- `is_partial`: missing exposure/access or an explicit pipeline partial warning.
+
+`Results` recomputes these fields when loading older files; old run folders remain
+valid. The dashboard reads these backend totals instead of calculating new metrics.
+
 ## 5. The model checkpoint (P2 → P4)
 
 `models/cutoff_unet_v1.pt` = `torch.save({"state_dict", "meta"})`, where meta contains at least:

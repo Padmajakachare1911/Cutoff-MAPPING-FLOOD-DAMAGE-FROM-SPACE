@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import os
+import shutil
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -248,6 +249,24 @@ def _cache_dir(ctx: RunContext) -> Path:
     return cache_root(ctx) / "osm" / grid_hash(ctx.grid) / _snapshot_slug(ctx.osm_snapshot) / digest
 
 
+def _matching_cached_layer(ctx: RunContext, cache_path: Path) -> Path:
+    """Reuse only exact date/grid/AOI/buffer/filter caches across transport namespaces."""
+    from cutoff.data.s1_acquire import cache_root
+    if cache_path.exists():
+        return cache_path
+    configured = cache_root(ctx)
+    base = configured.parent.parent if configured.parent.name == "dated_osm" else configured
+    relative = cache_path.relative_to(configured)
+    candidates = [base / relative, *sorted(base.glob("dated_osm/*/" + relative.as_posix()))]
+    for source in candidates:
+        if source.is_file() and source != cache_path:
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source, cache_path)
+            ctx.log(STAGE, event="matching_cache_migrated", layer=cache_path.stem, source=str(source))
+            break
+    return cache_path
+
+
 def stage_osm(ctx: RunContext) -> dict:
     """Write the four contract OSM layers in the run grid CRS."""
     assert_pre_event(ctx.osm_snapshot, ctx.event_datetime)
@@ -278,9 +297,13 @@ def stage_osm(ctx: RunContext) -> dict:
             frame = frame.drop_duplicates("osm_id").reset_index(drop=True)
             frame.to_parquet(cache_path)
         except Exception as exc:
+            cache_path = _matching_cached_layer(ctx, cache_path)
             if not cache_path.exists():
                 raise
-            ctx.warn(STAGE, f"ohsome unavailable for {layer}; using matching cached pre-event OSM: {exc}")
+            if ctx.mode == "cached":
+                ctx.log(STAGE, event="cache_hit", layer=layer, path=str(cache_path))
+            else:
+                ctx.warn(STAGE, f"ohsome unavailable for {layer}; using matching cached pre-event OSM: {exc}")
             frame = gpd.read_parquet(cache_path)
             apis.add("cache")
         if layer == "roads":

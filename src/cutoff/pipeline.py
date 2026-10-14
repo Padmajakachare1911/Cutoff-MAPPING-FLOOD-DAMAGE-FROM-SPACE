@@ -277,16 +277,13 @@ def run(bbox: tuple[float, float, float, float], event_datetime: str | datetime,
                 break
         cfg["run"]["cache_dir"] = str(base_cache)
         if flowpath:
-            if mode == "cached":
-                ctx.warn("flowpath", "Flow path skipped in cached mode: current tracing implementation needs network.")
-            else:
-                try:
-                    from cutoff.geo.flowpath import trace_flowpath
-                    ctx.summaries["flowpath"] = trace_flowpath(ctx, *flowpath)
-                    validate_run_dir(root, keys=["flowpath"])
-                except Exception as exc:
-                    ctx.path("flowpath").unlink(missing_ok=True)
-                    ctx.warn("flowpath", f"Optional flow path skipped: {exc}")
+            try:
+                from cutoff.geo.flowpath import trace_flowpath
+                ctx.summaries["flowpath"] = trace_flowpath(ctx, *flowpath)
+                validate_run_dir(root, keys=["flowpath"])
+            except Exception as exc:
+                ctx.path("flowpath").unlink(missing_ok=True)
+                ctx.warn("flowpath", f"Optional flow path skipped: {exc}")
         (root / "stage_returns.json").write_text(json.dumps(ctx.summaries, indent=2, default=str), encoding="utf-8")
         if "vectorize" not in ctx.summaries:
             ctx.log("pipeline", event="staged", message="Input-only subset; no results.json until hazard stages run.")
