@@ -33,12 +33,12 @@ python -m venv .venv
 python -m pip install -e ".[dev,app,pdf,ml]"
 python -m pytest -m "not network and not gpu"
 python -m cutoff.cli mock outputs/demo_mock
-python -m streamlit run app/streamlit_app.py
+python app/server.py
 ```
 
 The synthetic demo verifies interfaces/product behaviour, not model accuracy.
 WeasyPrint automatically falls back to xhtml2pdf when native libraries are absent.
-The dashboard launches a CLI subprocess, tails stage logs, offers run history,
+The local dashboard at `http://127.0.0.1:8000` launches a CLI subprocess, tails stage logs, offers run history,
 scenario switching, map evidence popups, Results tables and downloads. No current
 basemap tiles are used as evidence. Trained inference requires the `ml` extra;
 CPU torch/torchvision should come from the same [PyTorch index](https://pytorch.org/get-started/locally/).

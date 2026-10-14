@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Cutoff terrain map</title>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="/static/map.css">
+</head>
+<body>
+  <div id="map"></div>
+  <div class="map-topline">
+    <span class="live-dot"></span>
+    <span>3D TERRAIN</span>
+    <i></i>
+    <span>SATELLITE CONTEXT</span>
+  </div>
+  <div id="map-state">Loading terrain and evidence…</div>
+  <div class="layer-deck">
+    <button data-layer="hazard" class="active" title="Toggle flood surface"><i data-lucide="waves"></i><span>Flood</span></button>
+    <button data-layer="flow" class="active" title="Toggle downhill flow"><i data-lucide="move-down"></i><span>Flow</span></button>
+    <button data-layer="access" class="active" title="Toggle access closures"><i data-lucide="route-off"></i><span>Access</span></button>
+    <button data-layer="assets" class="active" title="Toggle mapped assets"><i data-lucide="map-pin"></i><span>Assets</span></button>
+  </div>
+  <div class="legend">
+    <strong>Hazard evidence</strong>
+    <span><i style="--c:#0879bd"></i>Flood high</span>
+    <span><i style="--c:#80c8e7"></i>Flood possible</span>
+    <span><i style="--c:#cf930c"></i>Rule decrease</span>
+    <span><i style="--c:#b23b27"></i>Rule increase</span>
+    <span><i style="--c:#ff7a00"></i>Downhill flow</span>
+    <span><i style="--c:#ff1f0f"></i>Closed route</span>
+    <small>Animated flow is terrain-derived when no requested flow path exists. Satellite imagery is visual context only.</small>
+  </div>
+  <script src="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.js"></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="/static/map.js"></script>
+</body>
+</html>

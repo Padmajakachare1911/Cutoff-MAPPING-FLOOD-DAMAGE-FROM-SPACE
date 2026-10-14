@@ -1,0 +1,63 @@
+/* Guided controls and descriptive access-policy selector. */
+@media (min-width: 821px) {
+  .topbar { grid-template-columns: 292px 1fr 260px; }
+  .shell { grid-template-columns: 320px minmax(0, 1fr); }
+}
+
+.choice-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 15px 0 7px;
+  color: #c6b6af;
+  font: 700 9px "Space Grotesk";
+  letter-spacing: .1em;
+}
+.choice-title svg { width: 13px; color: #f34125; }
+.choice-grid { display: grid; gap: 5px; }
+.mode-grid { grid-template-columns: repeat(3, 1fr); }
+.model-grid { grid-template-columns: 1fr 1fr; }
+.choice { margin: 0; cursor: pointer; }
+.choice input { position: absolute; opacity: 0; pointer-events: none; }
+.choice > span {
+  display: flex;
+  min-height: 52px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid #2f211e;
+  background: #090605;
+  color: #7d6e68;
+  transition: .22s;
+}
+.choice > span b { font: 600 10px "Space Grotesk"; color: #cdbdb7; }
+.choice > span small { float: none; margin: 0; color: #665954; font-size: 7px; letter-spacing: .03em; }
+.choice input:checked + span {
+  border-color: #bd2d19;
+  background: linear-gradient(145deg, rgba(131, 0, 0, .35), rgba(30, 7, 4, .8));
+  box-shadow: inset 2px 0 #ff371d, 0 7px 18px rgba(125, 0, 0, .1);
+}
+.choice input:checked + span b { color: #fff; }
+.advanced { margin: 12px 0; border: 1px solid #2a1b17; background: #080605; }
+.advanced summary { display: flex; align-items: center; gap: 7px; padding: 9px; color: #887771; font: 700 8px "Space Grotesk"; letter-spacing: .08em; cursor: pointer; }
+.advanced summary svg { width: 12px; color: #b8311e; }
+.advanced label { padding: 0 9px 9px; margin: 0; }
+
+.scenario-control { display: grid; grid-template-columns: repeat(3, minmax(108px, 1fr)); gap: 3px; border: 0; background: transparent; padding: 0; }
+.scenario-control button { width: auto; height: 52px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid #38201a; background: #0b0706; text-align: left; }
+.scenario-control button > b { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid #4a2921; font: 700 10px "Space Grotesk"; }
+.scenario-control button span, .scenario-control button strong, .scenario-control button small { display: block; }
+.scenario-control button strong { font: 600 9px "Space Grotesk"; }
+.scenario-control button small { margin-top: 2px; color: #695b56; font-size: 7px; }
+.scenario-control button.active { background: linear-gradient(135deg, rgba(131, 0, 0, .8), rgba(62, 5, 2, .9)); border-color: #d42614; }
+.scenario-control button.active > b { border-color: #ff6147; background: #b90202; }
+.scenario-control button.active small { color: #d79b8c; }
+.intel-panel::after { content: attr(data-scenario); }
+
+@media (max-width: 1150px) { .scenario-control { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 520px) {
+  .scenario-control { grid-template-columns: 1fr; }
+  .scenario-control button { width: 100%; }
+}
