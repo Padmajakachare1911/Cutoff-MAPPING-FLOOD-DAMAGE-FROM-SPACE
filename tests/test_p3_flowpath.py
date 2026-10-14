@@ -3,6 +3,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
+import pytest
 import yaml
 from pyproj import Transformer
 from shapely.geometry import Point
@@ -33,8 +34,9 @@ def test_tilted_valley_path_reaches_low_outlet():
 def test_trace_flowpath_writes_contract_and_lists_nearby_place(tmp_path, monkeypatch):
     run_dir = make_mock_run(tmp_path / "mock")
     cfg = yaml.safe_load((Path(__file__).parents[1] / "configs" / "default.yaml").read_text())
+    cfg["run"]["cache_dir"] = str(tmp_path / "cache")
     ctx = RunContext(run_dir, "mock", MOCK_BBOX, datetime(2026, 8, 26, 2, 52, tzinfo=UTC),
-                     "2026-07-27T00:00:00Z", "cached", cfg, Grid.from_json(run_dir / "grid.json"))
+                     "2026-07-27T00:00:00Z", "fast", cfg, Grid.from_json(run_dir / "grid.json"))
     grid = Grid(ctx.grid.epsg, (30, 0, ctx.grid.bounds[0], 0, -30, ctx.grid.bounds[3]), 30, 30)
     rows, cols = np.mgrid[:30, :30]
     dem = ((30 - rows) + np.abs(cols - 15) * 3).astype(np.float32)
@@ -44,10 +46,14 @@ def test_trace_flowpath_writes_contract_and_lists_nearby_place(tmp_path, monkeyp
     place = gpd.GeoDataFrame({"osm_id": ["node/1"], "place": ["village"], "name": ["Downstream"]},
                              geometry=[Point(start_x, grid.bounds[3] - 855)], crs=grid.crs).to_crs(4326)
     monkeypatch.setattr(flowpath, "make_grid", lambda *args, **kwargs: grid)
-    monkeypatch.setattr("cutoff.data.dem.dem_on_grid", lambda _: (dem, grid))
+    monkeypatch.setattr("cutoff.data.dem._cached_dem", lambda *args, **kwargs: (dem, grid))
     monkeypatch.setattr(flowpath, "fetch_layer", lambda *args, **kwargs: place)
 
     result = flowpath.trace_flowpath(ctx, start_lon, start_lat)
 
     assert result["settlements"] == ["Downstream"]
     validate_run_dir(run_dir, keys=["flowpath"], require_optional=True)
+    ctx.mode = "cached"
+    monkeypatch.setattr(flowpath, "fetch_layer", lambda *args, **kwargs: pytest.fail("Cached trace requested network"))
+    cached = flowpath.trace_flowpath(ctx, start_lon, start_lat)
+    assert cached == result

@@ -10,7 +10,10 @@ narrow gorges, which inflates HAND near the riverbank - hence the 60 m HAND corr
 """
 from __future__ import annotations
 
+import hashlib
 import math
+import shutil
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import numpy as np
@@ -45,7 +48,56 @@ def glo30_tiles(bbox_wgs84, source: str | None = None) -> list[str]:
     return urls
 
 
-def dem_on_grid(grid: Grid, buffer_m: float = 0) -> tuple[np.ndarray, Grid]:   # /vsicurl/ + bilinear warp
+def _local_tiles(urls: list[str], directory: Path) -> list[Path]:
+    """Cache whole public COGs for large mosaics, avoiding thousands of range requests."""
+    import rasterio
+    import requests
+
+    directory.mkdir(parents=True, exist_ok=True)
+
+    def download(url: str) -> Path | None:
+        identity = hashlib.sha256(url.encode()).hexdigest()[:12]
+        path = directory / f"{identity}_{url.rsplit('/', 1)[-1]}"
+        if path.is_file():
+            return path
+        tmp = _tmp_path(path)
+        # An interrupted earlier process may have retained a raw prefix of this
+        # immutable GLO-30 COG. Resume only this URL's namespaced file.
+        prefixes = list(directory.glob(f"{path.name}.*.tmp"))
+        prefix = max(prefixes, key=lambda p: p.stat().st_size, default=None)
+        if prefix is not None and prefix != tmp:
+            shutil.copyfile(prefix, tmp)
+        offset = tmp.stat().st_size if tmp.is_file() else 0
+        try:
+            headers = {"Range": f"bytes={offset}-"} if offset else {}
+            with requests.get(url, headers=headers, stream=True, timeout=(20, 60)) as response:
+                if response.status_code == 404:
+                    return None  # ocean tiles are absent from GLO-30
+                response.raise_for_status()
+                resumed = offset > 0 and response.status_code == 206
+                if resumed and not response.headers.get("Content-Range", "").startswith(f"bytes {offset}-"):
+                    raise RuntimeError("Copernicus DEM resume returned an unexpected byte range")
+                size = 0
+                with tmp.open("ab" if resumed else "wb") as output:
+                    for chunk in response.iter_content(chunk_size=64 * 1024):
+                        output.write(chunk)
+                        size += len(chunk)
+                expected = response.headers.get("Content-Length")
+                if expected and size != int(expected):
+                    raise RuntimeError("Incomplete Copernicus DEM tile download")
+            with rasterio.open(tmp) as raster:
+                if raster.crs is None or raster.count != 1:
+                    raise ValueError("Invalid Copernicus DEM tile")
+            tmp.replace(path)
+            return path
+        finally:
+            tmp.unlink(missing_ok=True)
+
+    with ThreadPoolExecutor(max_workers=9) as pool:
+        return [path for path in pool.map(download, urls) if path is not None]
+
+
+def dem_on_grid(grid: Grid, buffer_m: float = 0, *, tile_cache: Path | None = None) -> tuple[np.ndarray, Grid]:
     """GLO-30 heights (float32, NaN no-data) bilinearly resampled onto `grid` buffered by buffer_m,
     and that (buffered) grid."""
     import rasterio
@@ -59,9 +111,11 @@ def dem_on_grid(grid: Grid, buffer_m: float = 0) -> tuple[np.ndarray, Grid]:   #
     out = np.full((bg.height, bg.width), np.nan, np.float32)
     with rasterio.Env(**_GDAL_ENV):
         srcs = []
-        for url in glo30_tiles(window):
+        urls = glo30_tiles(window)
+        locations = _local_tiles(urls, tile_cache) if tile_cache is not None else [f"/vsicurl/{url}" for url in urls]
+        for location in locations:
             try:
-                srcs.append(rasterio.open(f"/vsicurl/{url}"))
+                srcs.append(rasterio.open(location))
             except rasterio.errors.RasterioIOError:
                 continue  # tile absent (open ocean)
         if not srcs:
@@ -88,7 +142,11 @@ def _cached_dem(ctx: RunContext, buffer_m: float) -> tuple[np.ndarray, Grid]:
             return ds.read(1).astype(np.float32), bg
     if ctx.mode == "cached":
         raise CacheMiss(f"cached mode: no DEM in the cache ({path}); run scripts/cache_aoi.py for this AOI first")
-    dem, bg2 = dem_on_grid(ctx.grid, buffer_m=buffer_m)
+    if bg.width * bg.height >= 10_000_000:
+        ctx.log("terrain", event="large_dem_download", tiles_dir=str(cache_root(ctx) / "dem/tiles"))
+        dem, bg2 = dem_on_grid(ctx.grid, buffer_m=buffer_m, tile_cache=cache_root(ctx) / "dem/tiles")
+    else:
+        dem, bg2 = dem_on_grid(ctx.grid, buffer_m=buffer_m)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = _tmp_path(path)
     with rasterio.open(tmp, "w", **bg2.profile("float32", 1, np.nan)) as dst:

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Cutoff terrain map</title>
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="/static/vendor/maplibre-gl.css">
   <link rel="stylesheet" href="/static/map.css">
 </head>
 <body>
@@ -13,7 +13,7 @@
     <span class="live-dot"></span>
     <span>3D TERRAIN</span>
     <i></i>
-    <span>SATELLITE CONTEXT</span>
+    <span>SENTINEL-1 / COPERNICUS DEM</span>
   </div>
   <div id="map-state">Loading terrain and evidence…</div>
   <div class="layer-deck">
@@ -21,6 +21,11 @@
     <button data-layer="flow" class="active" title="Toggle downhill flow"><i data-lucide="move-down"></i><span>Flow</span></button>
     <button data-layer="access" class="active" title="Toggle access closures"><i data-lucide="route-off"></i><span>Access</span></button>
     <button data-layer="assets" class="active" title="Toggle mapped assets"><i data-lucide="map-pin"></i><span>Assets</span></button>
+    <button data-layer="no_observation" class="active" title="Toggle unobservable pixels"><span>No observation</span></button>
+    <button data-layer="pre" class="active" title="Pre-event Sentinel-1 VV dB"><span>Pre VV</span></button>
+    <button data-layer="post" title="Post-event Sentinel-1 VV dB"><span>Post VV</span></button>
+    <button data-layer="score" title="Model score calibrated on global floods"><span>Model score</span></button>
+    <button data-layer="s2" title="Sentinel-2 clear-sky water"><span>S2 water</span></button>
   </div>
   <div class="legend">
     <strong>Hazard evidence</strong>
@@ -30,10 +35,12 @@
     <span><i style="--c:#b23b27"></i>Rule increase</span>
     <span><i style="--c:#ff7a00"></i>Downhill flow</span>
     <span><i style="--c:#ff1f0f"></i>Closed route</span>
-    <small>Animated flow is terrain-derived when no requested flow path exists. Satellite imagery is visual context only.</small>
+    <span><i style="--c:#394e99"></i>Permanent water (excluded from hazard total)</span>
+    <span><i style="--c:#727d85"></i>Hatched: no observation</span>
+    <small>Flow animation follows an explicitly computed DEM trace when available. Model score: calibrated on global floods. Map inputs: Sentinel-1/2, Copernicus DEM and dated OSM.</small>
   </div>
-  <script src="https://unpkg.com/maplibre-gl@5.15.0/dist/maplibre-gl.js"></script>
-  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="/static/vendor/maplibre-gl.js"></script>
+  <script src="/static/vendor/lucide.min.js"></script>
   <script src="/static/map.js"></script>
 </body>
 </html>

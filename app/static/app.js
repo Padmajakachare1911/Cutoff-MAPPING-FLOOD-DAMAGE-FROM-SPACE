@@ -1,4 +1,4 @@
-const state={run:null,data:null,scenario:'A',timer:null};
+const state={run:null,data:null,scenario:'A',timer:null,payload:null,busy:false,request:0};
 const $=selector=>document.querySelector(selector);
 const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const number=(value,digits=1)=>Number(value??0).toLocaleString(undefined,{maximumFractionDigits:digits});
@@ -36,28 +36,29 @@ async function loadRuns(selectFirst=false){
   document.querySelectorAll('.run').forEach(element=>element.onclick=()=>selectRun(element.dataset.id));
   animate('.run',{x:-12,duration:.35,stagger:.05,ease:'power2.out'});
   if(selectFirst&&!state.run&&runs.length){
-    const initial=runs.find(run=>run.state==='complete')||runs[0];
+    const initial=runs.find(run=>run.state==='complete'&&run.id!=='demo_mock')||runs.find(run=>run.state==='complete')||runs[0];
     await selectRun(initial.id);
   }
-  if(runs.some(run=>run.state==='running')){
-    clearTimeout(state.timer);
-    state.timer=setTimeout(()=>loadRuns(false).then(()=>state.run&&selectRun(state.run)),1500);
-  }
+  state.busy=runs.some(run=>run.state==='running');
+  $('#run-form button[type=submit]').disabled=state.busy;
+  clearTimeout(state.timer);
+  if(state.busy)state.timer=setTimeout(async()=>{try{await loadRuns(false);if(state.run)await selectRun(state.run)}catch(error){$('#form-message').textContent=error.message}},2000);
 }
 
 async function selectRun(id){
-  state.run=id;
+  state.run=id;const request=++state.request;
   document.querySelectorAll('.run').forEach(element=>element.classList.toggle('selected',element.dataset.id===id));
   const payload=await api(`/api/runs/${encodeURIComponent(id)}`);
-  if(payload.state==='complete'){state.data=payload.results;render()}else{state.data=null;renderPending(payload)}
+  if(request!==state.request)return;state.payload=payload;
+  if(payload.state==='complete'||payload.state==='partial'){state.data=payload.results;render()}else{state.data=null;renderPending(payload)}
 }
 
 function renderPending(payload){
   $('#run-state').textContent=payload.state.toUpperCase();
-  $('#run-title').innerHTML=`${esc(state.run)}<br><em>Processing terrain.</em>`;
-  $('#run-meta').textContent='Waiting for a valid results file.';
+  $('#run-title').innerHTML=`${esc(state.run)}<br><em>${payload.state==='failed'?'Analysis failed.':'Analysis in progress.'}</em>`;
+  $('#run-meta').textContent=payload.state==='failed'?'This run failed. The reason is shown below.':'Waiting for the pipeline to finish.';
   $('#alerts').innerHTML=payload.error?`<div class="alert error">${esc(payload.error.message)}</div>`:'<div class="alert info">Analysis is running. Live stage updates will appear here.</div>';
-  $('#metrics').innerHTML='';
+  $('#metrics').innerHTML='';$('#provenance').innerHTML='';$('#limitations').innerHTML='';$('#evaluation-card').hidden=true;
   $('#details').innerHTML=`<div class="panel-kicker">RUN TELEMETRY</div><h2>Stage<br>activity</h2><pre>${esc((payload.log||[]).join('\n'))}</pre>`;
   hideMap();
 }
@@ -65,14 +66,14 @@ function renderPending(payload){
 function render(){
   const results=state.data,scenario=results.access.find(item=>item.scenario===state.scenario);
   $('#details').dataset.scenario=state.scenario;
-  $('#run-state').textContent=results.model_version==='mock'?'SYNTHETIC TERRAIN':'COMPLETED ANALYSIS';
+  $('#run-state').textContent=results.model_version==='mock'?'SYNTHETIC TERRAIN':results.is_partial?'PARTIAL ANALYSIS':'COMPLETED ANALYSIS';
   $('#run-title').innerHTML=`${esc(results.run_id)}<br><em>Impact overview.</em>`;
   $('#run-meta').textContent=`Event ${new Date(results.inputs.event_datetime).toLocaleString()} · ${results.inputs.mode.toUpperCase()} MODE · ${String(results.model_version).toUpperCase()}`;
-  $('#alerts').innerHTML=(results.model_version==='mock'?'<div class="alert info">Synthetic demonstration — fictional evidence for product testing.</div>':'')+(results.warnings||[]).map(warning=>`<div class="alert">${esc(warning)}</div>`).join('');
-  const hazard=Object.values(results.hazard.area_km2_by_class).reduce((a,b)=>a+b,0),exposure=results.exposure||{};
+  $('#alerts').innerHTML=(results.model_version==='mock'?'<div class="alert info">Synthetic demonstration — fictional evidence for product testing.</div>':'')+(results.is_partial?'<div class="alert">Partial analysis: exposure or access is incomplete. Available hazard evidence remains visible.</div>':'')+(results.warnings||[]).map(warning=>`<div class="alert">${esc(warning)}</div>`).join('');
+  const hazard=results.hazard.total_hazard_km2,exposure=results.exposure||{};
   $('#metrics').innerHTML=[
     metric('Mapped hazard',number(hazard,2),'km²','waves'),
-    metric('Exposed buildings',sum(exposure.buildings_by_class),'assets','building-2'),
+    metric('Exposed buildings',exposure.total_exposed_buildings??'?','assets','building-2'),
     metric('Cut off',scenario?.counts.cut_off??'—','settlements','map-pin-off'),
     metric('Closed roads',scenario?number(scenario.closed_road_km,2):'—','km','route-off')
   ].join('');
@@ -80,9 +81,13 @@ function render(){
   $('#hazard-table').innerHTML=table(['Class','Area km²'],Object.entries(results.hazard.area_km2_by_class).map(([key,value])=>[key.replaceAll('_',' '),number(value,3)]).concat([['no observation',number(results.hazard.no_observation_km2,3)]]));
   const classes=new Set([...Object.keys(exposure.buildings_by_class||{}),...Object.keys(exposure.road_km_by_class||{}),...Object.keys(exposure.bridges_by_class||{})]);
   $('#exposure-table').innerHTML=results.exposure?table(['Class','Buildings','Road km','Bridges'],[...classes].map(key=>[key.replaceAll('_',' '),exposure.buildings_by_class[key]||0,number(exposure.road_km_by_class[key]||0,2),exposure.bridges_by_class[key]||0])):'<p class="muted">Unavailable for this partial run.</p>';
-  const files=[['Situation report','sitrep.pdf'],['Hazard GeoPackage','hazard.gpkg'],[`Settlements ${state.scenario}`,`settlements_${state.scenario}.gpkg`],['Hazard GeoTIFF','hazard_class.tif'],['Results JSON','results.json']];
-  $('#downloads').innerHTML=files.map(([label,file])=>`<a class="download" href="/api/files/${encodeURIComponent(results.run_id)}/${file}"><span>${esc(label)}</span><i data-lucide="arrow-down-to-line"></i></a>`).join('');
+  const files=[['Situation report','sitrep.pdf'],['Hazard GeoPackage','hazard.gpkg'],[`Settlements ${state.scenario}`,`settlements_${state.scenario}.gpkg`],['Hazard GeoTIFF','hazard_class.tif'],['Results JSON','results.json'],['Downstream trace','flowpath.gpkg']];
+  $('#downloads').innerHTML=files.filter(([,file])=>state.payload.downloads.includes(file)).map(([label,file])=>`<a class="download" href="/api/files/${encodeURIComponent(results.run_id)}/${file}"><span>${esc(label)}</span><i data-lucide="arrow-down-to-line"></i></a>`).join('');
   $('#attribution').innerHTML=results.attribution.map(item=>`<p>${esc(item)}</p>`).join('');
+  const inputs=results.inputs;
+  $('#provenance').innerHTML=table(['Input','Value'],[['Event UTC',inputs.event_datetime],['OSM snapshot UTC',inputs.osm_snapshot],['Track',`${inputs.rel_orbit} ${inputs.orbit_direction}`],['S1 backend',inputs.s1_backend],['Post lag hours',inputs.post_lag_hours],['Post scene',inputs.s1_post.id],['Pre scenes',inputs.s1_pre.map(x=>x.id).join('; ')],['S2 scenes',inputs.s2_scenes.join('; ')||'none'],['S2 clear fraction',inputs.s2_clear_fraction??'unavailable']]);
+  $('#limitations').innerHTML='<ul>'+results.limitations.map(x=>`<li>${esc(x)}</li>`).join('')+'</ul>'+(results.flowpath?`<h3>Computed downstream trace</h3><p>${esc(results.flowpath.length_km)} km. Nearby places: ${esc(results.flowpath.settlements.join(', ')||'none mapped')}.</p>`:'<p>No downstream trace requested or available.</p>')+'<p>3D terrain uses this run&#39;s Copernicus DEM; coverage ends at the DEM boundary.</p>';
+  const evaluation=Object.entries(state.payload.evaluation||{});$('#evaluation-card').hidden=!evaluation.length;$('#evaluation').innerHTML=evaluation.map(([name,text])=>`<h3>${esc(name)}</h3><pre>${esc(text)}</pre>`).join('');
   showMap();icons();
   animate('.metric',{y:18,duration:.55,stagger:.08,ease:'power3.out'});
   animate('.data-card',{y:24,duration:.6,stagger:.09,ease:'power3.out'});
@@ -90,7 +95,6 @@ function render(){
 }
 
 function metric(label,value,unit,icon){return `<div class="metric"><div class="metric-top"><span>${esc(label)}</span><i data-lucide="${icon}"></i></div><strong>${esc(value)} <em>${esc(unit)}</em></strong></div>`}
-function sum(object){return object?Object.values(object).reduce((a,b)=>a+b,0):'—'}
 function table(headers,rows){return `<table><thead><tr>${headers.map(item=>`<th>${esc(item)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(item=>`<td>${esc(item)}</td>`).join('')}</tr>`).join('')}</tbody></table>`}
 function showMap(){const frame=$('#map');frame.src=`/static/map.html?run=${encodeURIComponent(state.run)}&scenario=${state.scenario}&v=${Date.now()}`;frame.style.display='block';$('#map-empty').style.display='none';animate('.map-card',{scale:.985,duration:.65,ease:'power2.out'})}
 function hideMap(){$('#map').style.display='none';$('#map-empty').style.display='flex'}
@@ -105,6 +109,7 @@ $('#valley-preset').onchange=event=>{
   const preset=valleyPresets[event.target.value];
   if(!preset)return;
   $('#bbox').value=preset.bbox;$('#event-time').value=preset.event;$('#snapshot').value=preset.snapshot;
+  $('#flow-source').value='';
   animate('#run-form input',{backgroundColor:'rgba(131,0,0,.32)',duration:.5,stagger:.04,yoyo:true,repeat:1});
 };
 $('#run-form').onsubmit=async event=>{
@@ -114,6 +119,6 @@ $('#run-form').onsubmit=async event=>{
     const body=Object.fromEntries(new FormData(event.target));
     const run=await api('/api/runs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     message.textContent='ANALYSIS STARTED';await loadRuns(false);await selectRun(run.id);
-  }catch(error){message.textContent=error.message}finally{button.disabled=false}
+  }catch(error){message.textContent=error.message}finally{button.disabled=state.busy}
 };
 init().catch(error=>{$('#server-status').textContent='LOCAL / ERROR';$('#alerts').innerHTML=`<div class="alert error">${esc(error.message)}</div>`});

@@ -98,3 +98,19 @@ def test_stage_access_validates_on_mock_run(tmp_path):
     assert [item["scenario"] for item in result["access"]] == ["A", "B", "C"]
     validate_run_dir(run_dir, keys=["settlements_A", "settlements_B", "settlements_C",
                                     "roads_A", "roads_B", "roads_C"])
+
+
+def test_empty_road_coverage_reports_unknown_without_crashing(tmp_path):
+    run_dir = make_mock_run(tmp_path / "no_roads")
+    roads = gpd.read_file(run_dir / "osm_roads.gpkg").iloc[:0]
+    roads.to_file(run_dir / "osm_roads.gpkg", driver="GPKG")
+    cfg = yaml.safe_load((Path(__file__).parents[1] / "configs/default.yaml").read_text())
+    ctx = RunContext(run_dir, "no_roads", MOCK_BBOX, datetime(2026, 8, 26, 2, 52, tzinfo=UTC),
+                     "2026-07-27T00:00:00Z", "cached", cfg, Grid.from_json(run_dir / "grid.json"))
+    result = stage_access(ctx)
+    n_settlements = len(gpd.read_file(ctx.path("settlements")))
+    for scenario in result["access"]:
+        assert scenario["counts"] == dict(connected=0, degraded=0, cut_off=0, unknown=n_settlements)
+        assert scenario["closed_road_km"] == 0 and scenario["closed_bridges"] == 0
+    validate_run_dir(run_dir, keys=["settlements_A", "settlements_B", "settlements_C",
+                                    "roads_A", "roads_B", "roads_C"])

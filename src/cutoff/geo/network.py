@@ -50,6 +50,13 @@ def node_ways(roads: gpd.GeoDataFrame, max_seg_m: float = 100.0) -> gpd.GeoDataF
     if roads.crs is None or not roads.crs.is_projected:
         raise ValueError("roads must use a projected metre CRS")
     source = roads.reset_index(drop=True)
+    if source.empty:
+        out = source.copy()
+        out["way_start"] = np.empty(0, dtype=object)
+        out["way_end"] = np.empty(0, dtype=object)
+        out["parent_idx"] = np.empty(0, dtype=int)
+        out.insert(0, "seg_id", np.empty(0, dtype=int))
+        return out
     output = []
     for i, row in source.iterrows():
         way = row.geometry

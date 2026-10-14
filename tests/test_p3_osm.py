@@ -296,7 +296,30 @@ def test_stage_osm_reuses_only_matching_cache(tmp_path):
         gpd.read_file(ctx.path('osm_' + layer)).to_crs(4326).to_parquet(cache / (layer + '.parquet'))
     result = stage_osm(ctx)
     assert result['osm_api'] == 'cache' and result['osm_snapshot'] == ctx.osm_snapshot
+    assert not ctx.warnings
     validate_run_dir(run, keys=['osm_roads', 'osm_buildings', 'osm_places', 'osm_health'])
+
+
+def test_transport_namespace_reuses_only_exact_dated_query(tmp_path):
+    import copy
+
+    from cutoff.data.osm import _cache_dir, _matching_cached_layer
+    run = make_mock_run(tmp_path / 'mock')
+    cfg = yaml.safe_load((Path(__file__).parents[1] / 'configs/default.yaml').read_text())
+    cfg['run']['cache_dir'] = str(tmp_path / 'cache/dated_osm/new_transport')
+    ctx = RunContext(run, 'mock', MOCK_BBOX, EVENT, '2026-07-27T00:00:00Z', 'cached', cfg,
+                     Grid.from_json(run / 'grid.json'))
+    expected = _cache_dir(ctx) / 'roads.parquet'
+    relative = expected.relative_to(Path(cfg['run']['cache_dir']))
+    old = tmp_path / 'cache/dated_osm/old_transport' / relative
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b'verified exact query cache')
+    assert _matching_cached_layer(ctx, expected).read_bytes() == old.read_bytes()
+    changed = copy.deepcopy(cfg)
+    changed['access']['access_buffer_km'] += 1
+    different = RunContext(run, 'mock', MOCK_BBOX, EVENT, ctx.osm_snapshot, 'cached', changed, ctx.grid)
+    missing = _cache_dir(different) / 'roads.parquet'
+    assert not _matching_cached_layer(different, missing).exists()
 
 
 def test_cached_highway_area_does_not_reach_network(tmp_path):
