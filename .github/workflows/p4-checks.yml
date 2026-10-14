@@ -1,0 +1,33 @@
+name: P4 reusable checks
+on:
+  workflow_call:
+    inputs:
+      tests:
+        required: true
+        type: string
+jobs:
+  acceptance:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip install -e ".[dev,app,pdf]"
+      - run: python -m pytest ${{ inputs.tests }} -m "not network and not gpu"
+      - name: Mock product artifact
+        run: python -m cutoff.cli mock outputs/demo_mock
+      - uses: actions/upload-artifact@v4
+        with:
+          name: p4-demo-${{ matrix.os }}-${{ github.workflow }}
+          path: |
+            outputs/demo_mock/sitrep.pdf
+            outputs/demo_mock/results.json
+
