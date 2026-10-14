@@ -25,6 +25,8 @@ it does not certify the entire project ready for submission.
 - [x] Separate Linux/Windows pipeline/report/dashboard/evaluation/runtime CI workflows.
 - [x] Six-page report generated, page-count tested and every page visually inspected.
 - [x] No victim imagery; disclaimer and required credits present; reference-leak guard retained.
+- [x] Final offline suite: **165 passed, 1 skipped, 4 deselected**; P4 lint passed.
+- [x] Tracked-file credential scan passed; supplied credentials remain outside Git.
 
 ## Team / data / final submission gates still open
 

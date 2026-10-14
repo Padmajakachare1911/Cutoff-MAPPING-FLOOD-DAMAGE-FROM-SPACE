@@ -17,3 +17,11 @@ No frozen-v1 was falsely created and no check-only scores were fabricated.
 
 Video is explicitly deferred by the user. The user requests goal closure after
 submission review; do not generate the video until asked.
+
+## Final verification
+
+`python -m pytest -m "not network and not gpu" --basetemp=outputs/pytest-final -o addopts='' -q`:
+**165 passed, 1 skipped, 4 deselected**. P4 E/F/I lint: passed. Tracked-file scan
+against locally supplied credentials: passed; no credential values committed.
+All feature branches are pushed. PRs #26-#34 are merged after green CI; final
+report/checklist PRs #35/#36 remain reviewable until their checks complete.
