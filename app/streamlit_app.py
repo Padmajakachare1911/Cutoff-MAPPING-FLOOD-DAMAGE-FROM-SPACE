@@ -136,6 +136,7 @@ def main():
         options = [str(path) for path in history]
         if pending in options:
             st.session_state['selected_run_path'] = pending
+            st.session_state['run_history'] = pending
         remembered = st.session_state.get('selected_run_path')
         index = options.index(remembered) if remembered in options else 0
         chosen = st.selectbox('Run history', options, index=index,
