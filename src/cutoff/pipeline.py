@@ -28,6 +28,7 @@ import math
 import re
 import threading
 import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -203,13 +204,22 @@ def run(bbox: tuple[float, float, float, float], event_datetime: str | datetime,
     if flowpath and (len(flowpath) != 2 or not (-180 <= flowpath[0] <= 180 and -80 <= flowpath[1] <= 84)):
         raise ValueError("flowpath must be LON,LAT within the UTM coverage")
     digest = hashlib.sha256(json.dumps(list(bbox)).encode()).hexdigest()[:8]
+    generated_id = run_id is None
     run_id = run_id or f"{datetime.now(UTC):%Y%m%dT%H%M%S}_{digest}"
     if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,100}", run_id)
             or run_id.upper().split('.')[0] in {'CON', 'PRN', 'AUX', 'NUL', *[f'COM{i}' for i in range(1, 10)],
                                               *[f'LPT{i}' for i in range(1, 10)]} or run_id.endswith('.')):
         raise ValueError("run_id must be a safe folder name")
     root = Path(out_root).resolve() / run_id
-    root.mkdir(parents=True, exist_ok=False)
+    try:
+        root.mkdir(parents=True, exist_ok=False)
+    except FileExistsError:
+        if not generated_id:
+            raise
+        # Same-AOI runs can begin within the same second, especially in CI.
+        run_id += '_' + uuid.uuid4().hex[:8]
+        root = Path(out_root).resolve() / run_id
+        root.mkdir(parents=True, exist_ok=False)
     grid = make_grid(bbox)
     grid.to_json(root / "grid.json")
     if cache_dir:
