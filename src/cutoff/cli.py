@@ -81,7 +81,7 @@ def main(argv=None):
             root = make_mock_run(args.out)
             try:
                 from cutoff.report.schema import Results
-                pipeline.render_report(Results.model_validate_json((root / 'results.json').read_text()), root)
+                pipeline.render_report(Results.model_validate_json((root / 'results.json').read_text(encoding='utf-8')), root)
             except ImportError:
                 pass
         else:

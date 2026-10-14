@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Cutoff situation report</title>
+<style>
+@page { size: A4; margin: 12mm 13mm; }
+body { font-family: Helvetica, Arial, sans-serif; font-size: {{ font_size }}pt; color: #182b39; line-height: 1.15; }
+h1 { font-size: 21pt; color: #123b4a; margin: 0 0 4pt; }
+h2 { font-size: 11pt; color: #126575; margin: 9pt 0 4pt; }
+p { margin: 3pt 0; }
+.notice { background-color: #fff0d1; padding: 7pt; font-weight: bold; }
+.muted { color: #526572; }
+table { width: 100%; border-collapse: collapse; margin: 4pt 0; }
+th { background-color: #e7eff2; text-align: left; font-weight: bold; }
+td, th { padding: 3pt 4pt; border-bottom: 0.5pt solid #d9e1e5; }
+ul { margin: 3pt 0; padding-left: 13pt; }
+li { margin: 2pt 0; }
+.footer { margin-top: 9pt; border-top: 1pt solid #126575; padding-top: 5pt; font-size: 6.5pt; }
+</style></head><body>
+<p class="notice">{{ r.disclaimer }}</p>
+<h1>CUTOFF <span style="font-size:12pt">/ Situation report</span></h1>
+<p class="muted">{{ r.run_id[:80] }} | {{ r.created_utc[:19] }} UTC | Model: {{ r.model_version[:60] }}</p>
+{% if r.model_version == 'mock' %}<p><b>SYNTHETIC DEMONSTRATION - all data below is fictional.</b></p>{% endif %}
+<h2>Inputs and observation time</h2>
+<p>Event: {{ r.inputs.event_datetime }} | Post: {{ r.inputs.s1_post.datetime }} | Lag: {{ '%.2f'|format(r.inputs.post_lag_hours) }} h</p>
+<p>Track: {{ r.inputs.rel_orbit }} {{ r.inputs.orbit_direction }} | Backend: {{ r.inputs.s1_backend }} | Mode: {{ r.inputs.mode }} | Grid: EPSG {{ r.inputs.grid_epsg }}</p>
+<p>AOI W,S,E,N: {{ r.inputs.aoi_bbox|join(', ') }} | OSM: {{ r.inputs.osm_snapshot }}</p>
+<p>S2 used: {% if r.inputs.s2_scenes %}yes{% else %}no{% endif %}{% if r.inputs.s2_clear_fraction is not none %}; clear fraction {{ '%.3f'|format(r.inputs.s2_clear_fraction) }}{% endif %}</p>
+<h2>Where - mapped area</h2>
+<table><tr><th>Evidence class</th><th>Area (km²)</th><th>Evidence class</th><th>Area (km²)</th></tr>
+{% for name, area in r.hazard.area_km2_by_class.items() %}
+{% if loop.index0 % 2 == 0 %}<tr>{% endif %}<td>{{ name|replace('_', ' ') }}</td><td>{{ '%.4f'|format(area) }}</td>{% if loop.index0 % 2 == 1 %}</tr>{% elif loop.last %}<td></td><td></td></tr>{% endif %}
+{% endfor %}
+<tr><td><b>No observation</b></td><td>{{ '%.4f'|format(r.hazard.no_observation_km2) }}</td><td colspan="2">Model score is calibrated on global floods.</td></tr></table>
+<h2>What - exposed infrastructure</h2>
+{% if r.exposure is none %}<p><b>Unavailable - partial run. No exposure assessment is available.</b></p>{% else %}
+<table><tr><th>Hazard class</th><th>Buildings</th><th>Road km</th><th>Bridges</th></tr>
+{% for name in r.exposure.buildings_by_class %}<tr><td>{{ name|replace('_', ' ') }}</td>
+<td>{{ r.exposure.buildings_by_class[name] }}</td><td>{% if name in r.exposure.road_km_by_class %}{{ '%.3f'|format(r.exposure.road_km_by_class[name]) }}{% else %}n/a{% endif %}</td>
+<td>{% if name in r.exposure.bridges_by_class %}{{ r.exposure.bridges_by_class[name] }}{% else %}n/a{% endif %}</td></tr>{% endfor %}</table>
+{% endif %}
+<h2>Who - road access scenarios</h2>
+{% if r.access %}<table><tr><th>Scenario</th><th>Connected</th><th>Degraded</th><th>Cut off</th><th>Unknown</th><th>Closed km</th><th>Bridges</th></tr>
+{% for s in r.access %}<tr><td>{{ s.scenario }}</td><td>{{ s.counts.connected }}</td><td>{{ s.counts.degraded }}</td><td>{{ s.counts.cut_off }}</td><td>{{ s.counts.unknown }}</td><td>{{ '%.2f'|format(s.closed_road_km) }}</td><td>{{ s.closed_bridges }}</td></tr>{% endfor %}</table>
+<p class="muted">A: conservative proximity; B: sustained high-confidence overlap; C: bridge approaches only. A and C show sensitivity around B.</p>
+{% for s in r.access %}{% if s.scenario == 'B' %}<p><b>Cut off under B:</b>
+{% for v in s.cut_off[:15] %}{{ v.name[:48] }}{% if not loop.last %}; {% endif %}{% else %}none{% endfor %}
+{% if s.counts.cut_off > 15 %} (+{{ s.counts.cut_off - 15 }} more; full list in results.json){% endif %}</p>{% endif %}{% endfor %}
+{% else %}<p>Unavailable - partial run; no road access assessment.</p>{% endif %}
+<p class="muted">Unknown means no mapped baseline route, not safe. A mapped trail may remain where road access is cut off; see settlement popups.</p>
+{% if r.warnings %}<h2>Warnings</h2><ul>{% for w in r.warnings[:4] %}<li>{{ w[:160] }}{% if w|length > 160 %}...{% endif %}</li>{% endfor %}</ul><p class="muted">Complete warnings and source scene IDs: results.json.</p>{% endif %}
+<h2>Limitations</h2><ul>{% for limitation in r.limitations|shortest %}<li>{{ limitation[:180] }}</li>{% endfor %}</ul>
+<div class="footer">{% for credit in r.attribution %}<p>{{ credit }}</p>{% endfor %}</div>
+</body></html>
