@@ -11,8 +11,9 @@ P4.7-runtime, P4.8-submission-report, P4.9-submission-checklist.
 PRs: #26, #27, #28, #29, #30, #32, #33, #34, #35 and the final checklist PR.
 
 Start with [submission.md](submission.md) for the exact checked/unchecked state.
-Data-integrity repair is delegated to the teammate; live OSM/authentication and
-complete-run/freeze/E4/E6/cold E7 checks remain external handoff prerequisites.
+Data-integrity repair is integrated. Live authentication and complete north/south/Deir
+OSM/exposure/access/dashboard/PDF checks now pass; see [P4_LIVE_INTEGRATION.md](P4_LIVE_INTEGRATION.md).
+Independent rehearsal, freeze/E4/E6/cold E7 remain team submission prerequisites.
 No frozen-v1 was falsely created and no check-only scores were fabricated.
 
 Video is explicitly deferred by the user. The user requests goal closure after

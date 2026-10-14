@@ -4,13 +4,20 @@ from pathlib import Path
 
 import geopandas as gpd
 import httpx
+import pandas as pd
 import pytest
 import yaml
 from shapely.geometry import LineString, Point, box
 
 from cutoff.contracts_check import validate_run_dir
 from cutoff.data import osm
-from cutoff.data.osm import _snapshot_slug, assert_pre_event, fetch_layer, parse_layer, stage_osm
+from cutoff.data.osm import (
+    _snapshot_slug,
+    assert_pre_event,
+    fetch_layer,
+    parse_layer,
+    stage_osm,
+)
 from cutoff.geo.grid import Grid
 from cutoff.mock import MOCK_BBOX, make_mock_run
 from cutoff.runctx import RunContext
@@ -60,6 +67,16 @@ def test_recorded_v2_roads_fixture_parses_contract_fields():
     assert got.bridge.dtype == bool
 
 
+def test_parse_roads_excludes_highway_areas_from_routing():
+    raw = gpd.GeoDataFrame(
+        {"@osmId": ["way/1", "way/2"], "tags": [{"highway": "unclassified"}] * 2},
+        geometry=[LineString([(0, 0), (1, 0)]), box(0, 0, 1, 1)], crs=4326,
+    )
+    got = parse_layer(raw, "roads")
+    assert got.osm_id.tolist() == ["way/1"]
+    assert got.geom_type.tolist() == ["LineString"]
+
+
 def test_source_never_requests_latest():
     source = inspect.getsource(osm)
     assert '"time": "latest"' not in source
@@ -99,6 +116,27 @@ def test_fetch_layer_falls_back_to_v1_after_three_v2_503s(monkeypatch):
     assert got.loc[0, "tier"] == "track"
 
 
+@pytest.mark.parametrize("retry_after, expected_wait", [(None, 60.0), ("5", 60.0), ("75", 75.0)])
+def test_v2_rate_limit_waits_for_window_then_recovers(monkeypatch, retry_after, expected_wait):
+    calls, waits = [], []
+
+    def fake_post(url, **kwargs):
+        calls.append(url)
+        headers = {"retry-after": retry_after} if retry_after else {}
+        return httpx.Response(429 if len(calls) == 1 else 200,
+                              headers=headers, request=httpx.Request("POST", url))
+
+    monkeypatch.setenv("OHSOME_API_KEY", "test-key")
+    monkeypatch.setattr(osm.httpx, "post", fake_post)
+    monkeypatch.setattr(osm.time, "sleep", waits.append)
+    monkeypatch.setattr(osm, "_read_v2", lambda _: gpd.GeoDataFrame(geometry=[], crs=4326))
+
+    got = osm._request_v2(box(0, 0, 1, 1), "roads", "2026-07-27T00:00:00Z", {})
+
+    assert waits == [expected_wait]
+    assert len(calls) == 2 and got.attrs["osm_api"] == "v2"
+
+
 def test_stage_osm_tiles_deduplicates_and_validates_outputs(tmp_path, monkeypatch):
     run_dir = make_mock_run(tmp_path / "mock")
     cfg = yaml.safe_load((Path(__file__).parents[1] / "configs" / "default.yaml").read_text())
@@ -130,7 +168,7 @@ def test_stage_osm_tiles_deduplicates_and_validates_outputs(tmp_path, monkeypatc
     validate_run_dir(run_dir, keys=["osm_roads", "osm_buildings", "osm_places", "osm_health"])
 
 
-# ── Issue #25: snapshot slug is included in _cache_dir ─────────────────────────
+# â”€â”€ Issue #25: snapshot slug is included in _cache_dir â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def test_snapshot_slug_strips_colons_and_is_filesystem_safe():
@@ -159,7 +197,7 @@ def test_cache_dir_differs_for_different_snapshot_dates(tmp_path, monkeypatch):
     )
 
 
-# ── Issue #31: stale-cache fallback when both APIs fail ─────────────────────────
+# â”€â”€ Issue #31: stale-cache fallback when both APIs fail â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 
 def _make_minimal_roads_frame() -> gpd.GeoDataFrame:
@@ -182,8 +220,8 @@ def test_stage_osm_rejects_other_snapshot_cache_when_apis_fail(tmp_path, monkeyp
     grid = Grid.from_json(run_dir / "grid.json")
 
     # Plant a stale cache (different snapshot slug) for every layer.
-    from cutoff.data.s1_acquire import cache_root, grid_hash
     from cutoff.data.osm import _snapshot_slug
+    from cutoff.data.s1_acquire import grid_hash
 
     stale_slug = _snapshot_slug(other_snapshot)
     grid_cache = Path(cfg["run"]["cache_dir"]) / "osm" / grid_hash(grid)
@@ -232,6 +270,7 @@ def test_cache_dir_normalizes_offsets_and_preserves_distinct_times(tmp_path):
 
 def test_cache_dir_changes_with_routing_coverage(tmp_path):
     import copy
+
     from cutoff.data.osm import _cache_dir
     run = make_mock_run(tmp_path / 'mock')
     cfg = yaml.safe_load((Path(__file__).parents[1] / 'configs/default.yaml').read_text())
@@ -258,3 +297,28 @@ def test_stage_osm_reuses_only_matching_cache(tmp_path):
     result = stage_osm(ctx)
     assert result['osm_api'] == 'cache' and result['osm_snapshot'] == ctx.osm_snapshot
     validate_run_dir(run, keys=['osm_roads', 'osm_buildings', 'osm_places', 'osm_health'])
+
+
+def test_cached_highway_area_does_not_reach_network(tmp_path):
+    from cutoff.data.osm import _cache_dir
+    from cutoff.geo.network import node_ways
+
+    run = make_mock_run(tmp_path / 'mock')
+    cfg = yaml.safe_load((Path(__file__).parents[1] / 'configs/default.yaml').read_text())
+    cfg['run']['cache_dir'] = str(tmp_path / 'cache')
+    ctx = RunContext(run, 'mock', MOCK_BBOX, EVENT, '2026-07-27T00:00:00Z', 'cached', cfg,
+                     Grid.from_json(run / 'grid.json'))
+    cache = _cache_dir(ctx)
+    cache.mkdir(parents=True)
+    for layer in ['roads', 'buildings', 'places', 'health']:
+        frame = gpd.read_file(ctx.path('osm_' + layer)).to_crs(4326)
+        if layer == 'roads':
+            area = frame.iloc[[0]].copy()
+            area['osm_id'] = 'way/area'
+            area.geometry = [box(85.33, 28.15, 85.331, 28.151)]
+            frame = gpd.GeoDataFrame(pd.concat([frame, area]), crs=4326)
+        frame.to_parquet(cache / (layer + '.parquet'))
+    stage_osm(ctx)
+    roads = gpd.read_file(ctx.path('osm_roads'))
+    assert 'way/area' not in roads.osm_id.tolist()
+    assert not node_ways(roads).empty
