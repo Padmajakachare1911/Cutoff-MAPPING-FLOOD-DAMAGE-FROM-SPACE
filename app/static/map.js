@@ -32,7 +32,7 @@ function animateFlow(map,collection){
   map.addLayer({id:'flow-particles',type:'circle',source:'flow-particles',paint:{'circle-radius':3.5,'circle-color':'#ffe0b0','circle-stroke-color':'#ff4c00','circle-stroke-width':1.5}});
   const started=performance.now(),count=Math.min(16,Math.max(7,coordinates.length));
   function frame(now){
-    const phase=((now-started)/6500)%1;
+    const phase=(Math.max(0,now-started)/6500)%1;
     particles.features=Array.from({length:count},(_,index)=>{
       const position=((phase+index/count)%1)*(coordinates.length-1),segment=Math.min(coordinates.length-2,Math.floor(position)),mix=position-segment;
       const a=coordinates[segment],b=coordinates[segment+1];
