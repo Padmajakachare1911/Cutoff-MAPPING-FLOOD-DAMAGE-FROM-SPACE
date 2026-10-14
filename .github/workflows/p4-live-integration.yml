@@ -1,0 +1,16 @@
+name: P4 live integration guards
+on:
+  pull_request:
+    paths: ["src/cutoff/data/osm.py", "configs/default.yaml", "tests/test_p3_osm.py", "tests/test_p4_pipeline.py", ".github/workflows/p4-live-integration.yml"]
+  push:
+    branches: [main, "p4/**"]
+    paths: ["src/cutoff/data/osm.py", "configs/default.yaml", "tests/test_p3_osm.py", "tests/test_p4_pipeline.py", ".github/workflows/p4-live-integration.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    # Live acceptance evidence is recorded separately; CI needs no private keys.
+    uses: ./.github/workflows/p4-checks.yml
+    with:
+      tests: "tests/test_p3_osm.py tests/test_p4_pipeline.py"

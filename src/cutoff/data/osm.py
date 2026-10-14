@@ -135,6 +135,10 @@ def parse_layer(raw: gpd.GeoDataFrame, layer: str) -> gpd.GeoDataFrame:
     out = out.loc[out.geometry.notna() & ~out.geometry.is_empty].copy()
     if layer in {"roads", "buildings"} and len(out):
         out = out.explode(index_parts=False, ignore_index=True)
+    if layer == "roads":
+        # A highway-tagged area is not a routing centreline. Polygon.coords
+        # raises in network noding (observed in the real south AOI).
+        out = out.loc[out.geom_type.eq("LineString")].copy()
     return out[OUTPUT_COLUMNS[layer]]
 
 
@@ -152,7 +156,7 @@ def _request_v2(aoi, layer: str, snapshot_iso: str, cfg: dict[str, Any]) -> gpd.
     for attempt in range(3):
         try:
             response = httpx.post(f"{base}/extraction/features.parquet", json=payload,
-                                  headers={"authorization": key}, timeout=120.0)
+                                  headers={"authorization": key}, timeout=240.0)
             response.raise_for_status()
             result = _read_v2(response.content)
             result.attrs["osm_api"] = "v2"
@@ -283,6 +287,9 @@ def stage_osm(ctx: RunContext) -> dict:
                 ctx.warn(STAGE, f"ohsome unavailable for {layer}; using matching cached pre-event OSM: {exc}")
             frame = gpd.read_parquet(cache_path)
             apis.add("cache")
+        if layer == "roads":
+            # Apply the same contract to dated caches created before this fix.
+            frame = frame.loc[frame.geom_type.eq("LineString")].copy()
         frame = frame.to_crs(ctx.grid.crs)
         frame.to_file(ctx.path(f"osm_{layer}"), driver="GPKG")
         counts[layer] = len(frame)
