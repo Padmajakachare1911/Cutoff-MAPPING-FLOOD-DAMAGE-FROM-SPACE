@@ -80,7 +80,7 @@ Evidence is in the task reports `P1.0.md` … `P1.8.md`, the change log `P1_UPDA
 | 8.1 | Cache `trishuli_north` | ✅ | Real s1 + terrain + s2 |
 | 8.2 | Cache `trishuli_south` | ✅ | Real s1 + terrain + s2 |
 | 8.3 | One non-Trishuli 2026 flood AOI with a same-track pair, chosen from GFM news / ReliefWeb, reason recorded | ✅ | `deir_ez_zor` (Euphrates, May 2026, GFM news #247), 123D pair, `P1.8.md` |
-| 8.4 | **Upload `cache/` to the team Drive, link in `P1.8.md`** | ⬜ | **Remaining:** needs the team Drive folder/link (about 1.0 GB without `cache/s1/products/`) |
+| 8.4 | **Upload `cache/` to the team Drive, link in `P1.8.md`** | ? | Done: uploaded cache and shared Drive link recorded in the later P1.8 handoff. |
 | 8.5 | E3c backend consistency (median/p90 \|ΔdB\| on stable terrain; flood-mask IoU) | ⚠️ | `docs/results/E3c.md`: 0.59 / 0.58 dB, so the [TARGET] ≤ 0.5 is **narrowly missed**; flood IoU 0.735 (tiny support); hazard 1–4 IoU 0.313 |
 | 8.6 | E5 same-track vs cross-track (`stable_steep_fpr`, flood area; H3) | ✅ | `docs/results/E5.md`: FPR 2.1 × 10⁻⁶ vs 0.295; flood 0.005 vs 87.3 km². **H3 holds** |
 

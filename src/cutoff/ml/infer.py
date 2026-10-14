@@ -76,7 +76,7 @@ def stage_model(ctx: RunContext) -> dict:
     Returns: {"model_version": str, "flood_threshold": float, "temperature": float}
     """
     x = build_stack(ctx)
-    mp = ctx.model_path or "b0"
+    mp = ctx.model_path or ctx.cfg.get("model", {}).get("checkpoint", "models/cutoff_unet_v1.pt")
     if mp == "b0":
         from cutoff.ml.baselines import b0_proba
 

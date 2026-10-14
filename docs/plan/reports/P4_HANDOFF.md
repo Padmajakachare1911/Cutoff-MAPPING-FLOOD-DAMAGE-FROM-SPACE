@@ -23,5 +23,7 @@ submission review; do not generate the video until asked.
 `python -m pytest -m "not network and not gpu" --basetemp=outputs/pytest-final -o addopts='' -q`:
 **165 passed, 1 skipped, 4 deselected**. P4 E/F/I lint: passed. Tracked-file scan
 against locally supplied credentials: passed; no credential values committed.
-All feature branches are pushed. PRs #26-#34 are merged after green CI; final
-report/checklist PRs #35/#36 remain reviewable until their checks complete.
+P4 feature history through the report/checklist is included in the v1 submission
+integration. The production default is model-v1; b0 is explicit. Current remaining
+work is audited in TEAM_REMAINING_WORK.md. Historical verification above describes
+the original P4 delivery; the integration report records the new combined checks.

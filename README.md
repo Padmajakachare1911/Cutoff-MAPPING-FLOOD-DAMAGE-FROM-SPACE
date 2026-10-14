@@ -30,7 +30,7 @@ Without conda/make, supported platforms can use Python wheels:
 python -m venv .venv
 # Windows PowerShell: .\.venv\Scripts\Activate.ps1
 # Linux/macOS: source .venv/bin/activate
-python -m pip install -e ".[dev,app,pdf]"
+python -m pip install -e ".[dev,app,pdf,ml]"
 python -m pytest -m "not network and not gpu"
 python -m cutoff.cli mock outputs/demo_mock
 python -m streamlit run app/streamlit_app.py
@@ -51,6 +51,10 @@ Download the final model (or choose `--model b0`):
 gh release download model-v1 --repo Padmajakachare1911/Cutoff-MAPPING-FLOOD-DAMAGE-FROM-SPACE \
   --pattern cutoff_unet_v1.pt --dir models
 ```
+
+Production defaults select `models/cutoff_unet_v1.pt` from the configuration.
+Download the release before a real run. A missing checkpoint produces an error;
+`--model b0` remains an explicitly selected baseline. Model-v2 is not included.
 
 Expected SHA-256:
 `a2701cfcfbaa1d6facba585cb835aeff95607dadf6d6647ce84cb1d7fe380d46`.
@@ -88,7 +92,7 @@ See [P2 handoff](docs/plan/reports/P2_HANDOFF.md), [measured Kuro results](docs/
 [training config](configs/train_unet.yaml) and [P1 experiments](docs/plan/reports/P1.8.md).
 
 ```bash
-cutoff train --config configs/train_unet.yaml --seed 42
+cutoff train --config configs/train_unet.yaml --name b3_no_slope
 cutoff eval-kuro --checkpoint models/cutoff_unet_v1.pt --strata slope --split test
 python eval/access_eval.py outputs/trishuli_north --out outputs/trishuli_north/access_eval.json
 ```
@@ -128,3 +132,12 @@ P1 Data/SAR, P2 ML/Hazard, P3 OSM/Access, P4 Product/Integration. Ownership/cont
 [master plan](docs/plan/00_MASTER_PLAN.md), [interfaces](docs/plan/05_contracts.md).
 Task reports accompany feature PRs; check integration/submission evidence before
 judging. Code: [MIT](LICENSE). Data retain their upstream licences.
+
+## Submission integration status (14 October 2026)
+
+Completed v1 evidence/gating and P4 submission assets are integrated. V1 remains
+the default checkpoint; experimental v2 is excluded. Implementation is ahead of
+real-data acceptance: buffered, dated OSM and its direct-stage provenance fix,
+complete real runs, project freeze/E4, real E6 and final rehearsal remain pending.
+See [master-plan task audit](docs/plan/reports/TEAM_REMAINING_WORK.md) and
+[submission checklist](docs/plan/reports/submission.md) for verified requirements.

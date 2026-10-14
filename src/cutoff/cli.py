@@ -62,7 +62,7 @@ def main(argv=None):
     run.add_argument('--bbox', required=True, type=coordinates)
     run.add_argument('--event', required=True)
     run.add_argument('--mode', choices=RUN_MODES, default='cached')
-    run.add_argument('--model', default='b0')
+    run.add_argument('--model', default=None, help='Checkpoint path (default: configured model-v1); b0 is an explicit baseline')
     run.add_argument('--osm-snapshot')
     run.add_argument('--out', default='outputs')
     run.add_argument('--run-id')

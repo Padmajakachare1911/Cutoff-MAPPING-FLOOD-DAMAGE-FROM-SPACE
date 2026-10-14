@@ -32,7 +32,7 @@ it does not certify the entire project ready for submission.
 
 - [ ] Underlying OSM cache provenance fixed by teammate (#25; user says evening).
 - [ ] Ohsome v2 key or verified dated **15 km buffered** OSM caches available (#31).
-- [ ] Supplied live Sentinel Hub client/secret authenticate; CDSE account login itself is verified.
+- [x] This laptop's Sentinel Hub OAuth client/secret authenticated during the 14 October integration audit. Other teammates still need their own working credentials.
 - [ ] Complete real fast-mode Trishuli + non-Trishuli runs, exposure/access and fresh-clone case study verified.
 - [ ] Independent teammate fresh-clone test and an independently chosen unprepared AOI rehearsed.
 - [ ] Organiser questions answered (cached/fast acceptance, Kuro preprocessing, Nepali PDF, encoder weights).
@@ -57,3 +57,12 @@ checkout, run `eval/emsr927.py` once per frozen case; do not tune afterwards. Us
 `python eval/runtime.py --benchmark` for the prescribed size sweep. Then rebuild
 `python docs/report/build_report.py`, review the updated report, and record the
 checks here. Do not turn unchecked gates into claimed results.
+
+## V1 submission integration update
+
+The original P2 v1 gates/evidence and P4 report/checklist history are included in
+the submission integration. Configuration, CLI, direct pipeline/model stage and
+cache helper consistently choose model-v1 unless explicitly overridden. No v2
+experiment code or weights are included. See [TEAM_REMAINING_WORK.md](TEAM_REMAINING_WORK.md)
+for the task-by-task master-plan audit; source implementation does not imply the
+unchecked real-data acceptance gates above are complete.

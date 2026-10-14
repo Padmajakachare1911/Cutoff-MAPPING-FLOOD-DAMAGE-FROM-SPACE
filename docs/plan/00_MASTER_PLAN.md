@@ -35,7 +35,7 @@ The cross-team contracts are implemented and tested, so the four streams can sta
 |---|---|---|
 | D1 | **Live S1 path = Sentinel Hub Process API on CDSE** (`SIGMA0_ELLIPSOID`, orthorectified with `COPERNICUS_30`, no server speckle filter) + our own Lee Sigma filter. **SNAP (full mode) kept** as the reference/compliance backend. | SNAP takes about 10–25 min per scene, which is too slow for live judging. Sentinel Hub returns an AOI on our UTM grid in seconds, and σ⁰-ellipsoid matches Kuro Siwo's SNAP calibration (no terrain flattening). Organiser question Q2 confirms it counts as "raw". |
 | D2 | **OSM via ohsome API v2** (`api.heigit.org/ohsome-api/v2-rc/extraction/features.parquet`, header `Authorization: <key>`, `"time": "2026-07-27T00:00:00Z"`); v1 fallback | v2 needs a free API key; v1 shuts down on 2026-11-30. v2 data is current, so the snapshot time is mandatory and asserted. |
-| D3 | **Trishuli case study uses track 85 ascending**: post S1D 2026-08-28 12:21 UTC, pre 08-16 / 08-04 / 07-23. Tracks 121D (post 08-31) and 19D (post 09-05) are the alternates and the E5 cross-track ablation. | Read from the live CDSE STAC catalogue. Only Sentinel-1D appears over the corridor from Jul to Sep 2026, so same-track repeats are 12 days apart there. |
+| D3 | **Trishuli case study uses track 85 ascending**: post S1D 2026-08-28 12:21 UTC, pre 08-16 / 08-04 / 07-23. Track 19D (post 09-05) is the full-coverage alternate and E5 cross-track ablation. Track 121D (post 08-31) has only partial coverage on these demo AOIs and fails the 80% coverage requirement (P1.1/P1_HANDOFF). | Read from the live CDSE STAC catalogue. Only Sentinel-1D appears over the corridor from Jul to Sep 2026, so same-track repeats are 12 days apart there. |
 | D4 | Event input is a **datetime**: a post scene must be strictly after it. Trishuli = `2026-08-26T02:52:00Z`. | A date alone lets an earlier same-day pass count as "post". |
 | D5 | `to_db` keeps NaN (no-data) as NaN. | The blueprint mapped NaN to −30 dB, so footprint gaps looked like water. |
 | D6 | Slope channel clipped to 0–15° before normalisation; E3 also tests a 6-channel model with no slope. | Kuro Siwo is lowland-heavy, so Himalayan slopes are out-of-distribution inputs. |
@@ -109,6 +109,10 @@ Put secrets in `.env` (see `.env.example`); never commit them.
 3. Kuro Siwo's own preprocessing used SRTM (not on the allowed list). We use only Copernicus DEM in our pipeline. Is training on Kuro Siwo as published therefore fine?
 4. Under the segmentation-model option, is a Nepali situation report expected?
 5. May ImageNet-pretrained encoder weights be used to initialise the model?
+
+Current task-by-task status: [TEAM_REMAINING_WORK.md](reports/TEAM_REMAINING_WORK.md).
+The unchecked plan items below remain acceptance requirements, not a claim that
+implemented code or merged branches alone satisfy the submission.
 
 ## 7. Definition of done (the submission)
 
