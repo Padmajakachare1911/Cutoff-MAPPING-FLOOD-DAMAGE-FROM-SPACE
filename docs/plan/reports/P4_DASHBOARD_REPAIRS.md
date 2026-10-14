@@ -27,6 +27,10 @@ Historical failures stay failed; new runs never overwrite old evidence.
   retaining their upstream notices, so CDN requests cannot block core rendering.
 - Exact-date/grid/AOI/buffer/filter OSM caches can be reused across transport
   namespaces. Other dates or smaller routing buffers cannot satisfy a query.
+- Full mode checks local SNAP and CDSE login configuration before launching.
+  Its UI option is disabled with a setup explanation when prerequisites are
+  absent. The observed later `SnapNotFound` failure was missing local SNAP,
+  while Fast/Cached real runs work.
 - AOIs with no mapped roads produce unknown access, rather than a graph crash.
 - The full optional trace caches its expanded 30 m DEM and exact dated places,
   enabling offline reproduction. Large DEM mosaics cache whole public COG tiles, resume interrupted downloads,

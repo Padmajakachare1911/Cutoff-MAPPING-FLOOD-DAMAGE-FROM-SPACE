@@ -27,6 +27,8 @@ async function init(){
   $('#snapshot').value=config.default_snapshot;
   $('#cache').value=config.default_cache;
   $('#checkpoint-option').value=config.default_model;
+  const full=$('input[name=mode][value=full]');full.disabled=Boolean(config.full_mode_unavailable);
+  if(full.disabled){full.closest('label').title=config.full_mode_unavailable;full.closest('label').querySelector('small').textContent='Setup required';}
   await loadRuns(true);
 }
 

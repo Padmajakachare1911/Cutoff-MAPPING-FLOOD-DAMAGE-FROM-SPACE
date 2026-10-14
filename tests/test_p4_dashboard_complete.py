@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import numpy as np
+import pytest
 from PIL import Image
 
 from cutoff.mock import make_mock_run
@@ -25,6 +26,15 @@ def test_configured_cache_is_used_by_launch(tmp_path, monkeypatch):
     monkeypatch.setenv("CUTOFF_CACHE_DIR", str(tmp_path / "prepared"))
     args = module.validate_launch({"bbox": "85.28,28.1,85.42,28.29", "event": "2026-08-26T02:52:00Z", "model": "b0"})
     assert args[2] == "fast" and args[-1] == str((tmp_path / "prepared").resolve())
+
+
+def test_unavailable_full_mode_is_rejected_before_creating_a_run(tmp_path, monkeypatch):
+    module = server(tmp_path)
+    monkeypatch.setattr(module, "full_mode_unavailable", lambda: "Full mode requires ESA SNAP")
+    with pytest.raises(ValueError, match="requires ESA SNAP"):
+        module.launch_run({"bbox": "85.28,28.1,85.42,28.29", "event": "2026-08-26T02:52:00Z",
+                           "mode": "full", "model": "b0"})
+    assert not list(tmp_path.iterdir())
 
 
 def test_real_partial_state_and_totals_are_reported(tmp_path):

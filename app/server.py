@@ -79,6 +79,21 @@ def default_cache() -> Path:
     return Path(os.environ.get("CUTOFF_CACHE_DIR", ROOT / "cache")).expanduser().resolve()
 
 
+def full_mode_unavailable() -> str | None:
+    import shutil
+
+    from cutoff.data.snap import SnapNotFound, find_gpt
+    try:
+        gpt = find_gpt()
+        if not Path(gpt).is_file() and not shutil.which(gpt):
+            raise SnapNotFound("SNAP_GPT does not point to an installed executable")
+    except SnapNotFound:
+        return "Full mode requires ESA SNAP installed and SNAP_GPT configured. Choose Fast for Sentinel Hub processing."
+    if not all(os.environ.get(key, "").strip() for key in ("CDSE_USERNAME", "CDSE_PASSWORD")):
+        return "Full mode requires CDSE_USERNAME and CDSE_PASSWORD in the private .env. Choose Fast or configure them."
+    return None
+
+
 def run_state(root: Path) -> str:
     with PROCESS_LOCK:
         process = PROCESSES.get(root.name)
@@ -167,6 +182,8 @@ def validate_launch(payload: dict) -> list[str]:
     mode = str(payload.get("mode", "fast"))
     if mode not in {"cached", "fast", "full"}:
         raise ValueError("Mode must be cached, fast, or full")
+    if mode == "full" and (reason := full_mode_unavailable()):
+        raise ValueError(reason)
     model = str(payload.get("model") or ROOT / "models" / "cutoff_unet_v1.pt")
     if model != "b0" and not Path(model).expanduser().is_file():
         raise ValueError("Download model-v1 or choose b0")
@@ -245,6 +262,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "default_snapshot": DEFAULT_OSM_SNAPSHOT,
                     "default_cache": str(default_cache()),
                     "default_model": str(ROOT / "models" / "cutoff_unet_v1.pt"),
+                    "full_mode_unavailable": full_mode_unavailable(),
                 })
             if parsed.path == "/api/runs":
                 return self.send_json(list_runs())
