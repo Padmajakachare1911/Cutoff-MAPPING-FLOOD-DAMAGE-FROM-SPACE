@@ -54,7 +54,9 @@ the final dashboard/DEM regressions passed **10 tests**. Linux/Windows CI also
 includes the new dashboard and animation regressions.
 
 A fresh cached pipeline run `20261014T165114_e6840ed8` completed with
-no warnings and released model-v1.
+no warnings and released model-v1. Its actual browser view passed A/B/C and all
+selectable layers with every external browser request blocked; pinned libraries
+are served locally. Switching to failed runs clears prior tables and downloads.
 
 Private artifacts are under `C:/cutoff_data`: `dashboard_real_launch_verification.json`,
 `trishuli_repaired_dashboard.png`, `deir_repaired_dashboard.png`, and test logs.

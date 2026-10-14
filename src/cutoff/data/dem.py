@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import math
 import shutil
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -67,31 +68,39 @@ def _local_tiles(urls: list[str], directory: Path) -> list[Path]:
         prefix = max(prefixes, key=lambda p: p.stat().st_size, default=None)
         if prefix is not None and prefix != tmp:
             shutil.copyfile(prefix, tmp)
-        offset = tmp.stat().st_size if tmp.is_file() else 0
-        try:
-            headers = {"Range": f"bytes={offset}-"} if offset else {}
-            with requests.get(url, headers=headers, stream=True, timeout=(20, 60)) as response:
-                if response.status_code == 404:
-                    return None  # ocean tiles are absent from GLO-30
-                response.raise_for_status()
-                resumed = offset > 0 and response.status_code == 206
-                if resumed and not response.headers.get("Content-Range", "").startswith(f"bytes {offset}-"):
-                    raise RuntimeError("Copernicus DEM resume returned an unexpected byte range")
-                size = 0
-                with tmp.open("ab" if resumed else "wb") as output:
-                    for chunk in response.iter_content(chunk_size=64 * 1024):
-                        output.write(chunk)
-                        size += len(chunk)
-                expected = response.headers.get("Content-Length")
-                if expected and size != int(expected):
-                    raise RuntimeError("Incomplete Copernicus DEM tile download")
-            with rasterio.open(tmp) as raster:
-                if raster.crs is None or raster.count != 1:
-                    raise ValueError("Invalid Copernicus DEM tile")
-            tmp.replace(path)
-            return path
-        finally:
-            tmp.unlink(missing_ok=True)
+        for attempt in range(3):
+            offset = tmp.stat().st_size if tmp.is_file() else 0
+            try:
+                headers = {"Range": f"bytes={offset}-"} if offset else {}
+                with requests.get(url, headers=headers, stream=True, timeout=(20, 60)) as response:
+                    if response.status_code == 404:
+                        tmp.unlink(missing_ok=True)
+                        return None  # ocean tiles are absent from GLO-30
+                    response.raise_for_status()
+                    resumed = offset > 0 and response.status_code == 206
+                    if resumed and not response.headers.get("Content-Range", "").startswith(f"bytes {offset}-"):
+                        raise RuntimeError("Copernicus DEM resume returned an unexpected byte range")
+                    size = 0
+                    with tmp.open("ab" if resumed else "wb") as output:
+                        for chunk in response.iter_content(chunk_size=64 * 1024):
+                            output.write(chunk)
+                            size += len(chunk)
+                    expected = response.headers.get("Content-Length")
+                    if expected and size != int(expected):
+                        raise RuntimeError("Incomplete Copernicus DEM tile download")
+                with rasterio.open(tmp) as raster:
+                    if raster.crs is None or raster.count != 1:
+                        raise ValueError("Invalid Copernicus DEM tile")
+                tmp.replace(path)
+                return path
+            except requests.RequestException:
+                if attempt == 2:
+                    raise  # retain the prefix for a later retry
+                time.sleep(attempt + 1)
+            except Exception:
+                tmp.unlink(missing_ok=True)
+                raise
+        raise RuntimeError("Copernicus DEM tile download did not complete")
 
     with ThreadPoolExecutor(max_workers=9) as pool:
         return [path for path in pool.map(download, urls) if path is not None]

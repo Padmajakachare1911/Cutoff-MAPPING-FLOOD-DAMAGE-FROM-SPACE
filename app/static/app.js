@@ -59,6 +59,7 @@ function renderPending(payload){
   $('#run-meta').textContent=payload.state==='failed'?'This run failed. The reason is shown below.':'Waiting for the pipeline to finish.';
   $('#alerts').innerHTML=payload.error?`<div class="alert error">${esc(payload.error.message)}</div>`:'<div class="alert info">Analysis is running. Live stage updates will appear here.</div>';
   $('#metrics').innerHTML='';$('#provenance').innerHTML='';$('#limitations').innerHTML='';$('#evaluation-card').hidden=true;
+  $('#hazard-table').innerHTML='';$('#exposure-table').innerHTML='';$('#downloads').innerHTML='';
   $('#details').innerHTML=`<div class="panel-kicker">RUN TELEMETRY</div><h2>Stage<br>activity</h2><pre>${esc((payload.log||[]).join('\n'))}</pre>`;
   hideMap();
 }
@@ -66,7 +67,7 @@ function renderPending(payload){
 function render(){
   const results=state.data,scenario=results.access.find(item=>item.scenario===state.scenario);
   $('#details').dataset.scenario=state.scenario;
-  $('#run-state').textContent=results.model_version==='mock'?'SYNTHETIC TERRAIN':results.is_partial?'PARTIAL ANALYSIS':'COMPLETED ANALYSIS';
+  $('#run-state').textContent=results.is_partial?'PARTIAL ANALYSIS':results.model_version==='mock'?'SYNTHETIC TERRAIN':'COMPLETED ANALYSIS';
   $('#run-title').innerHTML=`${esc(results.run_id)}<br><em>Impact overview.</em>`;
   $('#run-meta').textContent=`Event ${new Date(results.inputs.event_datetime).toLocaleString()} · ${results.inputs.mode.toUpperCase()} MODE · ${String(results.model_version).toUpperCase()}`;
   $('#alerts').innerHTML=(results.model_version==='mock'?'<div class="alert info">Synthetic demonstration — fictional evidence for product testing.</div>':'')+(results.is_partial?'<div class="alert">Partial analysis: exposure or access is incomplete. Available hazard evidence remains visible.</div>':'')+(results.warnings||[]).map(warning=>`<div class="alert">${esc(warning)}</div>`).join('');

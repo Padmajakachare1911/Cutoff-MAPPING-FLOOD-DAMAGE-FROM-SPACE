@@ -318,6 +318,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 content_type = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
                 return self.send_bytes(path.read_bytes(), content_type, download=path.name)
             self.send_error_json("Not found", HTTPStatus.NOT_FOUND)
+        except ConnectionError:
+            return  # switching runs cancels in-flight image/tile requests
         except FileNotFoundError:
             self.send_error_json("Not found", HTTPStatus.NOT_FOUND)
         except (ValueError, OSError, json.JSONDecodeError) as exc:

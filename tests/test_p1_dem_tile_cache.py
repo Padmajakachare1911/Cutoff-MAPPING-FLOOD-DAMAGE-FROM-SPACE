@@ -48,6 +48,20 @@ def test_whole_dem_tile_cache_validates_and_reuses_public_files(tmp_path, monkey
     (resumed / (paths[0].name + ".123.tmp")).write_bytes(content[:64])
     assert _local_tiles(urls, resumed)[0].read_bytes() == content
 
+    interrupted = [True]
+
+    def stream_with_reset(self, chunk_size):
+        if interrupted[0]:
+            import requests
+            interrupted[0] = False
+            yield self.body[:64]
+            raise requests.ConnectionError("remote reset during transfer")
+        yield self.body
+
+    monkeypatch.setattr(Response, "iter_content", stream_with_reset)
+    monkeypatch.setattr("cutoff.data.dem.time.sleep", lambda seconds: None)
+    assert _local_tiles(urls, tmp_path / "network_retry")[0].read_bytes() == content
+
     Response.headers = {"Content-Length": str(len(content) + 1)}
     with pytest.raises(RuntimeError, match="Incomplete"):
         _local_tiles(urls, tmp_path / "truncated")
