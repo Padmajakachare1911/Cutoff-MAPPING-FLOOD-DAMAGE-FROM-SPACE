@@ -1,0 +1,16 @@
+name: P4 dashboard
+on:
+  pull_request:
+    paths: ["app/**", "tests/test_p4_app_smoke.py", ".github/workflows/**", "pyproject.toml"]
+  push:
+    branches: [main, "p4/**"]
+    paths: ["app/**", "tests/test_p4_app_smoke.py", ".github/workflows/**", "pyproject.toml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    uses: ./.github/workflows/p4-checks.yml
+    with:
+      tests: "tests/test_p4_app_smoke.py"
+
