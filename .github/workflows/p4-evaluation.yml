@@ -1,0 +1,15 @@
+name: P4 evaluation
+on:
+  pull_request:
+    paths: ["eval/emsr927.py", "tests/test_p4_emsr_harness.py", ".github/workflows/**"]
+  push:
+    branches: [main, "p4/**"]
+    paths: ["eval/emsr927.py", "tests/test_p4_emsr_harness.py", ".github/workflows/**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    uses: ./.github/workflows/p4-checks.yml
+    with:
+      tests: "tests/test_p4_emsr_harness.py"
