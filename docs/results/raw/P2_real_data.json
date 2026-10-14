@@ -1,0 +1,695 @@
+[
+ {
+  "run": "deir_ez_zor",
+  "tau": 0.5,
+  "pixel_area_m2": 100.0,
+  "grid_px": 3098868,
+  "valid_frac": 0.9954,
+  "lowland_frac": 0.9172,
+  "radiometry": {
+   "all_valid": {
+    "n_px": 3084531,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -12.91,
+      "train_mean": -10.764,
+      "offset_in_train_std": -0.61
+     },
+     "vh_pre_db": {
+      "mean": -22.242,
+      "train_mean": -17.411,
+      "offset_in_train_std": -1.26
+     },
+     "vv_post_db": {
+      "mean": -13.43,
+      "train_mean": -10.509,
+      "offset_in_train_std": -0.69
+     },
+     "vh_post_db": {
+      "mean": -23.463,
+      "train_mean": -17.112,
+      "offset_in_train_std": -1.41
+     },
+     "dvv_db": {
+      "mean": -0.52,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.22
+     },
+     "dvh_db": {
+      "mean": -1.22,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.4
+     }
+    }
+   },
+   "lowland_slope<5_hand<30": {
+    "n_px": 2842130,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -12.983,
+      "train_mean": -10.764,
+      "offset_in_train_std": -0.63
+     },
+     "vh_pre_db": {
+      "mean": -22.279,
+      "train_mean": -17.411,
+      "offset_in_train_std": -1.27
+     },
+     "vv_post_db": {
+      "mean": -13.522,
+      "train_mean": -10.509,
+      "offset_in_train_std": -0.72
+     },
+     "vh_post_db": {
+      "mean": -23.556,
+      "train_mean": -17.112,
+      "offset_in_train_std": -1.43
+     },
+     "dvv_db": {
+      "mean": -0.539,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.23
+     },
+     "dvh_db": {
+      "mean": -1.276,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.42
+     }
+    }
+   }
+  },
+  "p_flood": {
+   "share_ge_tau": 0.007092,
+   "area_ge_tau_km2": 2.188,
+   "quantiles_all": {
+    "p5": 0.0,
+    "p25": 0.012,
+    "p50": 0.022,
+    "p75": 0.05,
+    "p95": 0.19
+   },
+   "max": 0.949
+  },
+  "corridor_hand_le_10m": {
+   "n_px": 2393769,
+   "area_km2": 239.377,
+   "p_flood_quantiles": {
+    "p5": 0.001,
+    "p25": 0.013,
+    "p50": 0.026,
+    "p75": 0.06,
+    "p95": 0.218
+   },
+   "share_ge_tau": 0.009
+  },
+  "hazard_class_km2": {
+   "1": 0.777,
+   "2": 1.411,
+   "3": 4.189,
+   "4": 1.882,
+   "5": 95.247,
+   "254": 1.434
+  },
+  "permanent_on_steep_or_high_hand_km2": 3.869,
+  "stage_returns": {
+   "s1": {
+    "s1_backend": "sentinelhub",
+    "rel_orbit": 123,
+    "orbit_direction": "descending",
+    "s1_post": {
+     "id": "S1C_IW_GRDH_1SDV_20260526T032539_20260526T032604_007819_00FE47_DD61_COG",
+     "datetime": "2026-05-26T03:25:39.882667Z",
+     "platform": "sentinel-1c"
+    },
+    "s1_pre": [
+     {
+      "id": "S1D_IW_GRDH_1SDV_20260515T032549_20260515T032614_002789_004B8D_77C3_COG",
+      "datetime": "2026-05-15T03:25:49.085169Z",
+      "platform": "sentinel-1d"
+     },
+     {
+      "id": "S1C_IW_GRDH_1SDV_20260514T032539_20260514T032604_007644_00F870_8FD0_COG",
+      "datetime": "2026-05-14T03:25:39.197308Z",
+      "platform": "sentinel-1c"
+     },
+     {
+      "id": "S1D_IW_GRDH_1SDV_20260503T032548_20260503T032613_002614_0045B5_A0B5_COG",
+      "datetime": "2026-05-03T03:25:48.319711Z",
+      "platform": "sentinel-1d"
+     }
+    ],
+    "post_lag_hours": 27.428
+   },
+   "terrain": {
+    "dem_tiles": [
+     "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N35_00_E040_00_DEM/Copernicus_DSM_COG_10_N35_00_E040_00_DEM.tif"
+    ],
+    "hand_stream_upa_km2": 1.0
+   },
+   "s2": {
+    "s2_scenes": [
+     "S2A_MSIL2A_20260530T080721_N0512_R035_T37SEV_20260530T124912",
+     "S2A_MSIL2A_20260530T080721_N0512_R035_T37SFV_20260530T124912"
+    ],
+    "s2_clear_fraction": 0.9999
+   },
+   "model": {
+    "model_version": "cutoff_unet_v1.pt",
+    "flood_threshold": 0.5,
+    "temperature": 1.0365309715270996
+   },
+   "disturbance": {
+    "sigma_stable_db": 0.878990113735199,
+    "k_sigma": 3.0,
+    "n_stable_px": 2551
+   },
+   "gating": {
+    "stable_steep_fpr": null
+   },
+   "vectorize": {
+    "area_km2_by_class": {
+     "flood_high": 0.7772,
+     "flood_possible": 1.4105,
+     "rule_decrease": 4.1889,
+     "rule_increase": 1.8816,
+     "permanent_water": 95.2467
+    },
+    "no_observation_km2": 1.4337
+   }
+  },
+  "s2_check": {
+   "clear_frac": 0.9953,
+   "s2_water_km2": 12.036,
+   "model_water_km2_in_clear": 97.431,
+   "model_flood_km2_in_clear": 2.188,
+   "share_of_s2_water_model_calls_water": 0.4462,
+   "share_of_model_water_s2_calls_water": 0.0551,
+   "p_flood_quantiles_on_s2_water": {
+    "p5": 0.002,
+    "p25": 0.007,
+    "p50": 0.016,
+    "p75": 0.035,
+    "p95": 0.113
+   }
+  }
+ },
+ {
+  "run": "deir_ez_zor_fixed",
+  "tau": 0.5,
+  "pixel_area_m2": 100.0,
+  "grid_px": 3098868,
+  "valid_frac": 0.9954,
+  "lowland_frac": 0.9172,
+  "radiometry": {
+   "all_valid": {
+    "n_px": 3084531,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -12.91,
+      "train_mean": -10.764,
+      "offset_in_train_std": -0.61
+     },
+     "vh_pre_db": {
+      "mean": -22.242,
+      "train_mean": -17.411,
+      "offset_in_train_std": -1.26
+     },
+     "vv_post_db": {
+      "mean": -13.43,
+      "train_mean": -10.509,
+      "offset_in_train_std": -0.69
+     },
+     "vh_post_db": {
+      "mean": -23.463,
+      "train_mean": -17.112,
+      "offset_in_train_std": -1.41
+     },
+     "dvv_db": {
+      "mean": -0.52,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.22
+     },
+     "dvh_db": {
+      "mean": -1.22,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.4
+     }
+    }
+   },
+   "lowland_slope<5_hand<30": {
+    "n_px": 2842130,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -12.983,
+      "train_mean": -10.764,
+      "offset_in_train_std": -0.63
+     },
+     "vh_pre_db": {
+      "mean": -22.279,
+      "train_mean": -17.411,
+      "offset_in_train_std": -1.27
+     },
+     "vv_post_db": {
+      "mean": -13.522,
+      "train_mean": -10.509,
+      "offset_in_train_std": -0.72
+     },
+     "vh_post_db": {
+      "mean": -23.556,
+      "train_mean": -17.112,
+      "offset_in_train_std": -1.43
+     },
+     "dvv_db": {
+      "mean": -0.539,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.23
+     },
+     "dvh_db": {
+      "mean": -1.276,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.42
+     }
+    }
+   }
+  },
+  "p_flood": {
+   "share_ge_tau": 0.007092,
+   "area_ge_tau_km2": 2.188,
+   "quantiles_all": {
+    "p5": 0.0,
+    "p25": 0.012,
+    "p50": 0.022,
+    "p75": 0.05,
+    "p95": 0.19
+   },
+   "max": 0.949
+  },
+  "corridor_hand_le_10m": {
+   "n_px": 2393769,
+   "area_km2": 239.377,
+   "p_flood_quantiles": {
+    "p5": 0.001,
+    "p25": 0.013,
+    "p50": 0.026,
+    "p75": 0.06,
+    "p95": 0.218
+   },
+   "share_ge_tau": 0.009
+  },
+  "hazard_class_km2": {
+   "1": 0.777,
+   "2": 1.411,
+   "3": 6.311,
+   "4": 1.98,
+   "5": 5.329,
+   "254": 1.434
+  },
+  "permanent_on_steep_or_high_hand_km2": 0.0,
+  "stage_returns": {
+   "model": {
+    "model_version": "cutoff_unet_v1.pt",
+    "flood_threshold": 0.5,
+    "temperature": 1.0365309715270996
+   },
+   "disturbance": {
+    "sigma_stable_db": 0.878990113735199,
+    "k_sigma": 3.0,
+    "n_stable_px": 2551
+   },
+   "gating": {
+    "stable_steep_fpr": null
+   },
+   "vectorize": {
+    "area_km2_by_class": {
+     "flood_high": 0.7772,
+     "flood_possible": 1.4105,
+     "rule_decrease": 6.3109,
+     "rule_increase": 1.9804,
+     "permanent_water": 5.3287
+    },
+    "no_observation_km2": 1.4337
+   }
+  },
+  "s2_check": {
+   "clear_frac": 0.9953,
+   "s2_water_km2": 12.036,
+   "model_water_km2_in_clear": 97.431,
+   "model_flood_km2_in_clear": 2.188,
+   "share_of_s2_water_model_calls_water": 0.4462,
+   "share_of_model_water_s2_calls_water": 0.0551,
+   "p_flood_quantiles_on_s2_water": {
+    "p5": 0.002,
+    "p25": 0.007,
+    "p50": 0.016,
+    "p75": 0.035,
+    "p95": 0.113
+   }
+  }
+ },
+ {
+  "run": "trishuli_north",
+  "tau": 0.5,
+  "pixel_area_m2": 100.0,
+  "grid_px": 2983500,
+  "valid_frac": 1.0,
+  "lowland_frac": 0.0021,
+  "radiometry": {
+   "all_valid": {
+    "n_px": 2983500,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -6.427,
+      "train_mean": -10.764,
+      "offset_in_train_std": 1.23
+     },
+     "vh_pre_db": {
+      "mean": -12.483,
+      "train_mean": -17.411,
+      "offset_in_train_std": 1.29
+     },
+     "vv_post_db": {
+      "mean": -6.63,
+      "train_mean": -10.509,
+      "offset_in_train_std": 0.92
+     },
+     "vh_post_db": {
+      "mean": -12.753,
+      "train_mean": -17.112,
+      "offset_in_train_std": 0.97
+     },
+     "dvv_db": {
+      "mean": -0.203,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.13
+     },
+     "dvh_db": {
+      "mean": -0.27,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.15
+     }
+    }
+   },
+   "lowland_slope<5_hand<30": {
+    "n_px": 6230,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -8.547,
+      "train_mean": -10.764,
+      "offset_in_train_std": 0.63
+     },
+     "vh_pre_db": {
+      "mean": -15.319,
+      "train_mean": -17.411,
+      "offset_in_train_std": 0.55
+     },
+     "vv_post_db": {
+      "mean": -8.655,
+      "train_mean": -10.509,
+      "offset_in_train_std": 0.44
+     },
+     "vh_post_db": {
+      "mean": -15.491,
+      "train_mean": -17.112,
+      "offset_in_train_std": 0.36
+     },
+     "dvv_db": {
+      "mean": -0.108,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.1
+     },
+     "dvh_db": {
+      "mean": -0.171,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.13
+     }
+    }
+   }
+  },
+  "p_flood": {
+   "share_ge_tau": 1.6e-05,
+   "area_ge_tau_km2": 0.005,
+   "quantiles_all": {
+    "p5": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.002,
+    "p95": 0.035
+   },
+   "max": 0.715
+  },
+  "corridor_hand_le_10m": {
+   "n_px": 79217,
+   "area_km2": 7.922,
+   "p_flood_quantiles": {
+    "p5": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.003,
+    "p95": 0.028
+   },
+   "share_ge_tau": 0.0
+  },
+  "hazard_class_km2": {
+   "1": 0.0,
+   "2": 0.005,
+   "3": 0.164,
+   "4": 0.076,
+   "5": 9.766,
+   "254": 1.585
+  },
+  "permanent_on_steep_or_high_hand_km2": 9.66,
+  "stage_returns": {
+   "s1": {
+    "s1_backend": "sentinelhub",
+    "rel_orbit": 85,
+    "orbit_direction": "ascending",
+    "s1_post": {
+     "id": "S1D_IW_GRDH_1SDV_20260828T122141_20260828T122206_004326_007FA4_C73B_COG",
+     "datetime": "2026-08-28T12:21:41.762029Z",
+     "platform": "sentinel-1d"
+    },
+    "s1_pre": [
+     {
+      "id": "S1D_IW_GRDH_1SDV_20260816T122141_20260816T122206_004151_007980_B091_COG",
+      "datetime": "2026-08-16T12:21:41.058298Z",
+      "platform": "sentinel-1d"
+     },
+     {
+      "id": "S1D_IW_GRDH_1SDV_20260804T122140_20260804T122205_003976_00737A_38EB_COG",
+      "datetime": "2026-08-04T12:21:40.493161Z",
+      "platform": "sentinel-1d"
+     },
+     {
+      "id": "S1D_IW_GRDH_1SDV_20260723T122140_20260723T122205_003801_006D5D_2C7A_COG",
+      "datetime": "2026-07-23T12:21:40.113411Z",
+      "platform": "sentinel-1d"
+     }
+    ],
+    "post_lag_hours": 57.495
+   },
+   "terrain": {
+    "dem_tiles": [
+     "https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_N28_00_E085_00_DEM/Copernicus_DSM_COG_10_N28_00_E085_00_DEM.tif"
+    ],
+    "hand_stream_upa_km2": 1.0
+   },
+   "s2": {
+    "s2_scenes": [
+     "S2B_MSIL2A_20260827T045659_N0512_R119_T45RUM_20260827T084453"
+    ],
+    "s2_clear_fraction": 0.3546
+   },
+   "model": {
+    "model_version": "cutoff_unet_v1.pt",
+    "flood_threshold": 0.5,
+    "temperature": 1.0365309715270996
+   },
+   "disturbance": {
+    "sigma_stable_db": 1.312371015548706,
+    "k_sigma": 3.0,
+    "n_stable_px": 2546000
+   },
+   "gating": {
+    "stable_steep_fpr": 2.131747086114908e-06
+   },
+   "vectorize": {
+    "area_km2_by_class": {
+     "flood_high": 0.0,
+     "flood_possible": 0.0049,
+     "rule_decrease": 0.1643,
+     "rule_increase": 0.0764,
+     "permanent_water": 9.7663
+    },
+    "no_observation_km2": 1.5853
+   }
+  },
+  "s2_check": {
+   "clear_frac": 0.3546,
+   "s2_water_km2": 3.474,
+   "model_water_km2_in_clear": 4.318,
+   "model_flood_km2_in_clear": 0.005,
+   "share_of_s2_water_model_calls_water": 0.0087,
+   "share_of_model_water_s2_calls_water": 0.007,
+   "p_flood_quantiles_on_s2_water": {
+    "p5": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.001,
+    "p95": 0.011
+   }
+  }
+ },
+ {
+  "run": "trishuli_north_fixed",
+  "tau": 0.5,
+  "pixel_area_m2": 100.0,
+  "grid_px": 2983500,
+  "valid_frac": 1.0,
+  "lowland_frac": 0.0021,
+  "radiometry": {
+   "all_valid": {
+    "n_px": 2983500,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -6.427,
+      "train_mean": -10.764,
+      "offset_in_train_std": 1.23
+     },
+     "vh_pre_db": {
+      "mean": -12.483,
+      "train_mean": -17.411,
+      "offset_in_train_std": 1.29
+     },
+     "vv_post_db": {
+      "mean": -6.63,
+      "train_mean": -10.509,
+      "offset_in_train_std": 0.92
+     },
+     "vh_post_db": {
+      "mean": -12.753,
+      "train_mean": -17.112,
+      "offset_in_train_std": 0.97
+     },
+     "dvv_db": {
+      "mean": -0.203,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.13
+     },
+     "dvh_db": {
+      "mean": -0.27,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.15
+     }
+    }
+   },
+   "lowland_slope<5_hand<30": {
+    "n_px": 6230,
+    "channels": {
+     "vv_pre_db": {
+      "mean": -8.547,
+      "train_mean": -10.764,
+      "offset_in_train_std": 0.63
+     },
+     "vh_pre_db": {
+      "mean": -15.319,
+      "train_mean": -17.411,
+      "offset_in_train_std": 0.55
+     },
+     "vv_post_db": {
+      "mean": -8.655,
+      "train_mean": -10.509,
+      "offset_in_train_std": 0.44
+     },
+     "vh_post_db": {
+      "mean": -15.491,
+      "train_mean": -17.112,
+      "offset_in_train_std": 0.36
+     },
+     "dvv_db": {
+      "mean": -0.108,
+      "train_mean": 0.254,
+      "offset_in_train_std": -0.1
+     },
+     "dvh_db": {
+      "mean": -0.171,
+      "train_mean": 0.299,
+      "offset_in_train_std": -0.13
+     }
+    }
+   }
+  },
+  "p_flood": {
+   "share_ge_tau": 1.6e-05,
+   "area_ge_tau_km2": 0.005,
+   "quantiles_all": {
+    "p5": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.002,
+    "p95": 0.035
+   },
+   "max": 0.715
+  },
+  "corridor_hand_le_10m": {
+   "n_px": 79217,
+   "area_km2": 7.922,
+   "p_flood_quantiles": {
+    "p5": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.003,
+    "p95": 0.028
+   },
+   "share_ge_tau": 0.0
+  },
+  "hazard_class_km2": {
+   "1": 0.0,
+   "2": 0.005,
+   "3": 0.166,
+   "4": 0.078,
+   "5": 0.059,
+   "254": 1.585
+  },
+  "permanent_on_steep_or_high_hand_km2": 0.0,
+  "stage_returns": {
+   "model": {
+    "model_version": "cutoff_unet_v1.pt",
+    "flood_threshold": 0.5,
+    "temperature": 1.0365309715270996
+   },
+   "disturbance": {
+    "sigma_stable_db": 1.312371015548706,
+    "k_sigma": 3.0,
+    "n_stable_px": 2546000
+   },
+   "gating": {
+    "stable_steep_fpr": 2.131747086114908e-06
+   },
+   "vectorize": {
+    "area_km2_by_class": {
+     "flood_high": 0.0,
+     "flood_possible": 0.0049,
+     "rule_decrease": 0.1658,
+     "rule_increase": 0.0783,
+     "permanent_water": 0.0595
+    },
+    "no_observation_km2": 1.5853
+   }
+  },
+  "s2_check": {
+   "clear_frac": 0.3546,
+   "s2_water_km2": 3.474,
+   "model_water_km2_in_clear": 4.318,
+   "model_flood_km2_in_clear": 0.005,
+   "share_of_s2_water_model_calls_water": 0.0087,
+   "share_of_model_water_s2_calls_water": 0.007,
+   "p_flood_quantiles_on_s2_water": {
+    "p5": 0.0,
+    "p25": 0.0,
+    "p50": 0.0,
+    "p75": 0.001,
+    "p95": 0.011
+   }
+  }
+ }
+]

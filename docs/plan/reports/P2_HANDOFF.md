@@ -1,6 +1,6 @@
 # P2 (ML & Hazard): handoff log
 
-**Status (2026-10-13, ~02:00): P2 work is complete.** The final model is frozen and published as release **`model-v1`**. All four P2 pipeline stages are merged. E1, E2, E3 and E8 are measured. The only remaining P2 item is a joint check on real Trishuli rasters, which needs P1's `s1` and `terrain` stages (see "Open items").
+**Status (2026-10-14): P2 work is complete, including the C2 real-data check.** `model-v1` stays frozen. The real-data check (`P2.12_real_data.md`) found that the model does not detect the Trishuli or Deir ez-Zor floods on its own (domain shift: gorge, desert); the change-rule layer carries the hazard there. Two gating fixes for false "permanent water" are on branch `p2/P2.8-permanent-water-terrain` and must merge before `frozen-v1`. E8 per slope, the E3 validation number and `docs/experiment_log.md` are on `p2/P2.11-evidence-gaps`. A parked improvement plan is in `P2_model_improvement_plan.md`.
 
 Results: **`docs/results/P2_kuro_results.md`**. Full task list: `docs/plan/02_P2_ml_hazard.md`.
 
@@ -76,12 +76,9 @@ Results: **`docs/results/P2_kuro_results.md`**. Full task list: `docs/plan/02_P2
 - The HF CDN drops long streams. The fetcher uses 96 MB ranges, resumes at real tar headers, and saves per-segment offsets. Rerunning `python scripts/fetch_kuro_subset.py fetch --jobs 4 --splits val train test --test-per-event 1000` is always safe.
 
 ## Open items
-1. **Real-data check (with P1/P4 at C2):** run `stage_model` (`model-v1`) → `stage_disturbance` → `stage_gating` → `stage_vectorize` on real Trishuli rasters from P1's `s1` and `terrain` stages. Report:
-   - `stable_steep_fpr` (E2 on Trishuli);
-   - a visual check that the Bhote Koshi corridor is detected;
-   - the no-observation share.
-
-   No retuning: thresholds are frozen.
+1. ~~Real-data check at C2~~ **done 2026-10-14**: `P2.12_real_data.md`. Trishuli `stable_steep_fpr` 2.1 × 10⁻⁶, no observation 1.59 km², Bhote Koshi corridor visible in ΔVV (2× more > 3 dB change than stable terrain), model flood 0.005 km². Deir ez-Zor: the model calls desert "permanent water" (95 km²) and misses the river flood; the rule layer finds 4–6 km² of decrease along the banks.
+   - **Branches to merge (P2):** `p2/P2.8-permanent-water-terrain` (gating rules 4/5 + contract text; **before `frozen-v1`**), `p2/P2.11-evidence-gaps`, `p2/P2.12-real-data-check`, `p2/model-improvement-plan`.
+   - **For P4's report:** state that the U-Net's real-scene flood signal is near zero in both demo AOIs and that the change rule carries the hazard there.
 2. **Optional:** a flood-specific calibration (isotonic on validation) could lower flood ECE, but the improvement would be measured on the same small validation set. Not done; stated as a limitation.
 3. **Known domain differences to state in the report:**
    - Kuro Siwo DEM/terrain correction used SRTM; we use GLO-30.
