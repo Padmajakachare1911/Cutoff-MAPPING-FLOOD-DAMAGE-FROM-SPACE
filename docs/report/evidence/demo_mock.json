@@ -1,0 +1,156 @@
+{
+ "contract_version": "1.0.0",
+ "run_id": "demo_mock",
+ "created_utc": "2026-10-14T03:25:35.015712Z",
+ "model_version": "mock",
+ "inputs": {
+  "aoi_bbox": [
+   85.32,
+   28.14,
+   85.36,
+   28.18
+  ],
+  "grid_epsg": 32645,
+  "event_datetime": "2026-08-26T02:52:00Z",
+  "osm_snapshot": "2026-07-27T00:00:00Z",
+  "mode": "cached",
+  "s1_backend": "cached",
+  "rel_orbit": 85,
+  "orbit_direction": "ascending",
+  "s1_post": {
+   "id": "MOCK_S1D_20260828T122141",
+   "datetime": "2026-08-28T12:21:41Z",
+   "platform": "sentinel-1d"
+  },
+  "s1_pre": [
+   {
+    "id": "MOCK_S1D_20260816T122141",
+    "datetime": "2026-08-16T12:21:41Z",
+    "platform": "sentinel-1d"
+   }
+  ],
+  "post_lag_hours": 57.5,
+  "s2_scenes": [
+   "MOCK_S2"
+  ],
+  "s2_clear_fraction": 0.5
+ },
+ "hazard": {
+  "area_km2_by_class": {
+   "flood_high": 0.2988,
+   "flood_possible": 0.0249,
+   "rule_decrease": 0.0,
+   "rule_increase": 0.1188,
+   "permanent_water": 0.135
+  },
+  "no_observation_km2": 0.16,
+  "sigma_stable_db": 1.1,
+  "k_sigma": 3.0,
+  "flood_threshold": 0.5,
+  "temperature": 1.0,
+  "stable_steep_fpr": 0.0
+ },
+ "exposure": {
+  "buildings_by_class": {
+   "flood_high": 3
+  },
+  "road_km_by_class": {
+   "flood_high": 1.31
+  },
+  "bridges_by_class": {
+   "flood_high": 1
+  }
+ },
+ "access": [
+  {
+   "scenario": "A",
+   "description": "Conservative: any road piece within 15 m of any hazard class 1-4 is closed",
+   "closed_road_km": 4.95,
+   "closed_bridges": 1,
+   "counts": {
+    "connected": 1,
+    "degraded": 0,
+    "cut_off": 2,
+    "unknown": 1
+   },
+   "cut_off": [
+    {
+     "sid": "S0",
+     "name": "Upper Village",
+     "lon": 85.3422591417169,
+     "lat": 28.179376297699847,
+     "t0_min": 22.0
+    },
+    {
+     "sid": "S2",
+     "name": "West Village",
+     "lon": 85.32267879800615,
+     "lat": 28.161539192686654,
+     "t0_min": 31.0
+    }
+   ],
+   "degraded": []
+  },
+  {
+   "scenario": "B",
+   "description": "Moderate: road piece closed if >= 50 m of it lies in high-confidence hazard (1, 4)",
+   "closed_road_km": 0.0,
+   "closed_bridges": 0,
+   "counts": {
+    "connected": 2,
+    "degraded": 0,
+    "cut_off": 1,
+    "unknown": 1
+   },
+   "cut_off": [
+    {
+     "sid": "S0",
+     "name": "Upper Village",
+     "lon": 85.3422591417169,
+     "lat": 28.179376297699847,
+     "t0_min": 22.0
+    }
+   ],
+   "degraded": []
+  },
+  {
+   "scenario": "C",
+   "description": "Bridges only: bridge closed if high-confidence hazard reaches its approaches",
+   "closed_road_km": 0.27,
+   "closed_bridges": 1,
+   "counts": {
+    "connected": 2,
+    "degraded": 0,
+    "cut_off": 1,
+    "unknown": 1
+   },
+   "cut_off": [
+    {
+     "sid": "S2",
+     "name": "West Village",
+     "lon": 85.32267879800615,
+     "lat": 28.161539192686654,
+     "t0_min": 31.0
+    }
+   ],
+   "degraded": []
+  }
+ ],
+ "flowpath": null,
+ "warnings": [
+  "MOCK DATA - synthetic valley, not a real observation"
+ ],
+ "timings_s": {
+  "mock": 0.0
+ },
+ "limitations": [
+  "Synthetic mock run for development only."
+ ],
+ "attribution": [
+  "Contains modified Copernicus Sentinel data 2026.",
+  "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
+  "© OpenStreetMap contributors.",
+  "Flood model trained on Kuro Siwo (Bountos et al., NeurIPS 2024 Datasets & Benchmarks), CC BY 4.0."
+ ],
+ "disclaimer": "Educational prototype - not an operational tool. Exposure is not confirmed damage."
+}

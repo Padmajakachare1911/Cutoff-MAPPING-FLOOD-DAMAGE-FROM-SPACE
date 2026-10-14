@@ -1,0 +1,100 @@
+{
+  "contract_version": "1.0.0",
+  "run_id": "c2-deir-ez-zor-model",
+  "created_utc": "2026-10-14T03:47:57.450139Z",
+  "model_version": "cutoff_unet_v1.pt",
+  "inputs": {
+    "aoi_bbox": [
+      40.05,
+      35.25,
+      40.25,
+      35.4
+    ],
+    "grid_epsg": 32637,
+    "event_datetime": "2026-05-25T00:00:00Z",
+    "osm_snapshot": "2026-05-01T00:00:00Z",
+    "mode": "cached",
+    "s1_backend": "cached",
+    "rel_orbit": 123,
+    "orbit_direction": "descending",
+    "s1_post": {
+      "id": "S1C_IW_GRDH_1SDV_20260526T032539_20260526T032604_007819_00FE47_DD61_COG",
+      "datetime": "2026-05-26T03:25:39.882667Z",
+      "platform": "sentinel-1c"
+    },
+    "s1_pre": [
+      {
+        "id": "S1D_IW_GRDH_1SDV_20260515T032549_20260515T032614_002789_004B8D_77C3_COG",
+        "datetime": "2026-05-15T03:25:49.085169Z",
+        "platform": "sentinel-1d"
+      },
+      {
+        "id": "S1C_IW_GRDH_1SDV_20260514T032539_20260514T032604_007644_00F870_8FD0_COG",
+        "datetime": "2026-05-14T03:25:39.197308Z",
+        "platform": "sentinel-1c"
+      },
+      {
+        "id": "S1D_IW_GRDH_1SDV_20260503T032548_20260503T032613_002614_0045B5_A0B5_COG",
+        "datetime": "2026-05-03T03:25:48.319711Z",
+        "platform": "sentinel-1d"
+      }
+    ],
+    "post_lag_hours": 27.428,
+    "s2_scenes": [
+      "S2A_MSIL2A_20260530T080721_N0512_R035_T37SEV_20260530T124912",
+      "S2A_MSIL2A_20260530T080721_N0512_R035_T37SFV_20260530T124912"
+    ],
+    "s2_clear_fraction": 0.9999
+  },
+  "hazard": {
+    "area_km2_by_class": {
+      "flood_high": 0.7772,
+      "flood_possible": 1.4107,
+      "rule_decrease": 4.1891,
+      "rule_increase": 1.8816,
+      "permanent_water": 95.2441
+    },
+    "no_observation_km2": 1.4337,
+    "sigma_stable_db": 0.878990113735199,
+    "k_sigma": 3.0,
+    "flood_threshold": 0.5,
+    "temperature": 1.0365309715270996,
+    "stable_steep_fpr": null
+  },
+  "exposure": null,
+  "access": [],
+  "flowpath": null,
+  "warnings": [
+    "change-rule noise estimated from 'hand>60' (AOI has little high terrain)",
+    "Partial run: osm failed; dependent stages skipped: cached mode does not make OSM requests"
+  ],
+  "timings_s": {
+    "s1": 28.3073,
+    "terrain": 15.7277,
+    "s2": 0.7577,
+    "model": 8.2532,
+    "disturbance": 0.5658,
+    "gating": 0.5529,
+    "vectorize": 1.1392,
+    "osm": 0.0186,
+    "report": 1.0402
+  },
+  "limitations": [
+    "No early warning: Sentinel-1 revisits a track every 6–12 days; maps show the situation at the post-event pass, which may be after the peak.",
+    "10 m pixels: narrow channels, single roads and small bridges are near or below resolution; closures are inferred from proximity.",
+    "Radar shadow/layover areas cannot be observed from one track and are shown as 'no observation'.",
+    "Smooth wet mud can look like water; rough debris is detected only as statistical change, not classified.",
+    "Exposure is not damage: no structural assessment is made.",
+    "The model score is calibrated on global, mostly lowland floods, not on the Himalaya.",
+    "Access results depend on OpenStreetMap completeness; 'unknown' means unmapped, not safe.",
+    "Educational prototype, not an operational tool.",
+    "Permanent-water scores may include steep radar back-slopes; this class is excluded from hazard exposure."
+  ],
+  "attribution": [
+    "Contains modified Copernicus Sentinel data 2026.",
+    "Produced using Copernicus WorldDEM-30 © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
+    "© OpenStreetMap contributors.",
+    "Flood model trained on Kuro Siwo (Bountos et al., NeurIPS 2024 Datasets & Benchmarks), CC BY 4.0."
+  ],
+  "disclaimer": "Educational prototype - not an operational tool. Exposure is not confirmed damage."
+}
