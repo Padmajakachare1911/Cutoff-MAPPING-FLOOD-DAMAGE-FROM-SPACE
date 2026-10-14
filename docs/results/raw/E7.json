@@ -1,0 +1,76 @@
+{
+  "machine": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "python": "3.13.5",
+    "cpu": "AMD64 Family 25 Model 117 Stepping 2, AuthenticAMD",
+    "logical_cpus": 12,
+    "ram_gb": 16.36
+  },
+  "notes": "RSS is process plus children; excludes GPU VRAM. Label cache state separately.",
+  "runs": [
+    {
+      "run": "c1-trishuli-north-b0",
+      "pipeline_wall_s": 64.77697086334229,
+      "stage_s": {
+        "s1": 38.4175,
+        "terrain": 19.0978,
+        "s2": 0.3381,
+        "model": 2.1261,
+        "disturbance": 0.5637,
+        "gating": 0.5856,
+        "vectorize": 1.0344,
+        "osm": 1.2772
+      },
+      "peak_rss_mb": 764.75,
+      "partial": true,
+      "mode": "fast",
+      "model": "b0",
+      "warnings": [
+        "Partial run: osm failed; dependent stages skipped: ohsome v2 and v1 failed (OHSOME_API_KEY is required for ohsome API v2; Client error '403 Forbidden' for url 'https://api.ohsome.org/v1/elements/geometry'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403)"
+      ]
+    },
+    {
+      "run": "c2-trishuli-north-model",
+      "pipeline_wall_s": 56.96360635757446,
+      "stage_s": {
+        "s1": 28.0743,
+        "terrain": 15.4521,
+        "s2": 0.7107,
+        "model": 9.4955,
+        "disturbance": 0.5621,
+        "gating": 0.542,
+        "vectorize": 0.9399,
+        "osm": 0.0134
+      },
+      "peak_rss_mb": 1308.47,
+      "partial": true,
+      "mode": "cached",
+      "model": "cutoff_unet_v1.pt",
+      "warnings": [
+        "Partial run: osm failed; dependent stages skipped: cached mode does not make OSM requests"
+      ]
+    },
+    {
+      "run": "c2-deir-ez-zor-model",
+      "pipeline_wall_s": 56.4715576171875,
+      "stage_s": {
+        "s1": 28.3073,
+        "terrain": 15.7277,
+        "s2": 0.7577,
+        "model": 8.2532,
+        "disturbance": 0.5658,
+        "gating": 0.5529,
+        "vectorize": 1.1392,
+        "osm": 0.0186
+      },
+      "peak_rss_mb": 1325.57,
+      "partial": true,
+      "mode": "cached",
+      "model": "cutoff_unet_v1.pt",
+      "warnings": [
+        "change-rule noise estimated from 'hand>60' (AOI has little high terrain)",
+        "Partial run: osm failed; dependent stages skipped: cached mode does not make OSM requests"
+      ]
+    }
+  ]
+}
