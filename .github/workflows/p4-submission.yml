@@ -1,0 +1,15 @@
+name: P4 submission
+on:
+  pull_request:
+    paths: ["docs/report/**", "docs/plan/reports/submission.md", "tests/test_p4_submission.py", ".github/workflows/**"]
+  push:
+    branches: [main, "p4/**"]
+    paths: ["docs/report/**", "docs/plan/reports/submission.md", "tests/test_p4_submission.py", ".github/workflows/**"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  checks:
+    uses: ./.github/workflows/p4-checks.yml
+    with:
+      tests: "tests/test_p4_submission.py"
