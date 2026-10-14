@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import html
+import itertools
 import math
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import folium
 import geopandas as gpd
 import numpy as np
 import rasterio
+from pyproj import Transformer
 from rasterio.transform import from_bounds
 from rasterio.warp import (
     Resampling,
@@ -82,6 +84,56 @@ def vector_data(path):
     data = frame.__geo_interface__
     data['attribution'] = ODBL_NOTICE
     return data
+
+
+def derived_flowline(root, points=36):
+    """Approximate a downhill valley axis from mapped hazard pixels and the DEM.
+
+    This is a display-only fallback when the run has no requested flowpath.  PCA
+    follows the long axis of the footprint, while DEM samples orient it from
+    higher to lower terrain.
+    """
+    root = Path(root)
+    with rasterio.open(root / 'hazard_class.tif') as hazard:
+        data = hazard.read(1)
+        rows, cols = np.where(np.isin(data, (1, 2, 3, 4)))
+        if len(rows) < 3:
+            return None
+        pixels = np.column_stack((cols.astype(float), rows.astype(float)))
+        centered = pixels - pixels.mean(axis=0)
+        _, vectors = np.linalg.eigh(np.cov(centered, rowvar=False))
+        axis = vectors[:, -1]
+        along = centered @ axis
+        edges = np.linspace(along.min(), along.max(), min(points, len(rows)) + 1)
+        centers = []
+        indexes = []
+        for low, high in itertools.pairwise(edges):
+            selected = (along >= low) & (along <= high)
+            if not selected.any():
+                continue
+            point = np.median(pixels[selected], axis=0)
+            col, row = round(point[0]), round(point[1])
+            centers.append((col, row))
+            indexes.append((row, col))
+        coordinates = [rasterio.transform.xy(hazard.transform, row, col) for col, row in centers]
+        transformer = Transformer.from_crs(hazard.crs, 4326, always_xy=True)
+    if len(coordinates) < 2:
+        return None
+    dem_path = root / 'dem.tif'
+    if dem_path.is_file():
+        with rasterio.open(dem_path) as dem:
+            elevations = [float(dem.read(1, window=((row, row + 1), (col, col + 1)))[0, 0]) for row, col in indexes]
+        if elevations[0] < elevations[-1]:
+            coordinates.reverse()
+    line = [list(transformer.transform(x, y)) for x, y in coordinates]
+    return {
+        'type': 'FeatureCollection',
+        'features': [{
+            'type': 'Feature',
+            'properties': {'kind': 'terrain-derived', 'direction': 'downhill', 'display_only': True},
+            'geometry': {'type': 'LineString', 'coordinates': line},
+        }],
+    }
 
 
 def build_map(results, root, scenario):

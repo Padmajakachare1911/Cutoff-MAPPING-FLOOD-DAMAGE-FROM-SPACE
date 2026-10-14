@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ml = ["torch>=2.2", "segmentation-models-pytorch>=0.3.3", "huggingface_hub>=0.23"]
-app = ["streamlit>=1.33", "folium>=0.16", "streamlit-folium>=0.20", "matplotlib>=3.8"]
+app = ["folium>=0.16", "matplotlib>=3.8"]
 pdf = ["weasyprint>=60", "xhtml2pdf>=0.2.15", "pypdf>=4", "pymupdf>=1.24"]
 dev = ["pytest>=8", "ruff>=0.4"]
 

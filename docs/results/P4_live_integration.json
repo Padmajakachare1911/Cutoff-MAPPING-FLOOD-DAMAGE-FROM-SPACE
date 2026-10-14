@@ -1,0 +1,420 @@
+{
+  "verified_date": "2026-10-14",
+  "base_commit": "038c490",
+  "branch": "p4/live-integration-unblock",
+  "acquisition": "warm satellite/DEM/S2 cache; new live dated ohsome v2 OSM; south final rerun uses that matching OSM cache",
+  "tests": {
+    "passed": 188,
+    "skipped": 1,
+    "deselected": 4,
+    "seconds": 98.18
+  },
+  "cases": [
+    {
+      "run_id": "p4-live-north-v1-20261014-r2",
+      "aoi_bbox": [
+        85.28,
+        28.1,
+        85.42,
+        28.29
+      ],
+      "event_datetime": "2026-08-26T02:52:00+00:00",
+      "osm_snapshot": "2026-07-27T00:00:00+00:00",
+      "model_version": "cutoff_unet_v1.pt",
+      "exposure": {
+        "buildings_by_class": {
+          "flood_high": 0,
+          "rule_increase": 15,
+          "rule_decrease": 55,
+          "flood_possible": 0
+        },
+        "road_km_by_class": {
+          "flood_high": 0.0,
+          "rule_increase": 0.3388,
+          "rule_decrease": 1.1152,
+          "flood_possible": 0.0
+        },
+        "bridges_by_class": {
+          "flood_high": 0,
+          "rule_increase": 1,
+          "rule_decrease": 4,
+          "flood_possible": 0
+        }
+      },
+      "warnings": [],
+      "timings_s": {
+        "s1": 33.2415,
+        "terrain": 24.2282,
+        "s2": 0.3779,
+        "model": 11.5332,
+        "disturbance": 0.7861,
+        "gating": 0.6724,
+        "vectorize": 1.0661,
+        "osm": 40.5904,
+        "settlements": 1.9438,
+        "exposure": 1.1518,
+        "access": 19.0847,
+        "report": 1.623
+      },
+      "pdf_pages": 1,
+      "contracts": "pass",
+      "dashboard_scenarios": "pass",
+      "results_sha256": "9245b1215444b9c007b500cd7614ea5d58ec1ce09779f0c787ae59e1aeb831bc",
+      "mode": "fast",
+      "osm": {
+        "osm_snapshot": "2026-07-27T00:00:00Z",
+        "osm_api": "v2",
+        "counts": {
+          "roads": 2697,
+          "buildings": 5703,
+          "places": 216,
+          "health": 12
+        }
+      },
+      "osm_live_source_run": "p4-live-north-v1-20261014-r2",
+      "osm_live_source_counts": {
+        "roads": 2697,
+        "buildings": 5703,
+        "places": 216,
+        "health": 12
+      },
+      "access_buffer_km": 15,
+      "routing_query_bounds_wgs84": [
+        85.12708809755046,
+        27.964631520772194,
+        85.57292946867561,
+        28.425362295810952
+      ],
+      "routing_tiles_per_layer": 1,
+      "model_sha256": "a2701cfcfbaa1d6facba585cb835aeff95607dadf6d6647ce84cb1d7fe380d46",
+      "config_sha256": "8b2a516ae606df214265d34c46b178b155f8885d2c2a139e6ea8fd2ae437b406",
+      "wall_seconds": 136.44,
+      "access": [
+        {
+          "scenario": "A",
+          "closed_road_km": 7.34,
+          "closed_bridges": 5,
+          "counts": {
+            "connected": 54,
+            "degraded": 0,
+            "cut_off": 28,
+            "unknown": 54
+          }
+        },
+        {
+          "scenario": "B",
+          "closed_road_km": 0.05,
+          "closed_bridges": 1,
+          "counts": {
+            "connected": 82,
+            "degraded": 0,
+            "cut_off": 0,
+            "unknown": 54
+          }
+        },
+        {
+          "scenario": "C",
+          "closed_road_km": 0.05,
+          "closed_bridges": 1,
+          "counts": {
+            "connected": 82,
+            "degraded": 0,
+            "cut_off": 0,
+            "unknown": 54
+          }
+        }
+      ],
+      "cache_assets": {
+        "roads": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/a06dbf65848b/2026-07-27T000000Z/e82c3db637166e86/roads.parquet",
+          "sha256": "ff91ca5c4734c7b7bd0e449b82148039d5eefa51402df8c7b9e0e176685bb277"
+        },
+        "buildings": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/a06dbf65848b/2026-07-27T000000Z/e82c3db637166e86/buildings.parquet",
+          "sha256": "8c054420ebb134c748bac03ffb8b13b94d5155c4e92d266673586e8a55a1a14a"
+        },
+        "places": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/a06dbf65848b/2026-07-27T000000Z/e82c3db637166e86/places.parquet",
+          "sha256": "a0c42cb3336239b4ed3aaad49b6df861c6f9e80424092e1ead96b4a03512f76d"
+        },
+        "health": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/a06dbf65848b/2026-07-27T000000Z/e82c3db637166e86/health.parquet",
+          "sha256": "02dc998beb820f566c45d0e96eea9b50ff2b51ed7cf1db5a4163fd21aab7d6dc"
+        }
+      }
+    },
+    {
+      "run_id": "p4-live-south-v1-20261014-r3",
+      "aoi_bbox": [
+        85.1,
+        27.88,
+        85.3,
+        28.1
+      ],
+      "event_datetime": "2026-08-26T02:52:00+00:00",
+      "osm_snapshot": "2026-07-27T00:00:00+00:00",
+      "model_version": "cutoff_unet_v1.pt",
+      "exposure": {
+        "buildings_by_class": {
+          "flood_high": 47,
+          "rule_increase": 26,
+          "rule_decrease": 316,
+          "flood_possible": 8
+        },
+        "road_km_by_class": {
+          "flood_high": 1.0591,
+          "rule_increase": 1.2628,
+          "rule_decrease": 4.2446,
+          "flood_possible": 0.1621
+        },
+        "bridges_by_class": {
+          "flood_high": 3,
+          "rule_increase": 0,
+          "rule_decrease": 9,
+          "flood_possible": 0
+        }
+      },
+      "warnings": [
+        "ohsome unavailable for roads; using matching cached pre-event OSM: cached mode does not make OSM requests",
+        "ohsome unavailable for buildings; using matching cached pre-event OSM: cached mode does not make OSM requests",
+        "ohsome unavailable for places; using matching cached pre-event OSM: cached mode does not make OSM requests",
+        "ohsome unavailable for health; using matching cached pre-event OSM: cached mode does not make OSM requests"
+      ],
+      "timings_s": {
+        "s1": 56.0356,
+        "terrain": 43.2463,
+        "s2": 1.4382,
+        "model": 19.6818,
+        "disturbance": 1.3044,
+        "gating": 1.2512,
+        "vectorize": 1.6474,
+        "osm": 2.6503,
+        "settlements": 61.7587,
+        "exposure": 9.3928,
+        "access": 92.5782,
+        "report": 1.3619
+      },
+      "pdf_pages": 1,
+      "contracts": "pass",
+      "dashboard_scenarios": "pass",
+      "results_sha256": "5be102b3f05c5ed127b8df8b9e0fdb3275126dfc494278ad0a79cac1301b47ce",
+      "mode": "cached",
+      "osm": {
+        "osm_snapshot": "2026-07-27T00:00:00Z",
+        "osm_api": "cache",
+        "counts": {
+          "roads": 18552,
+          "buildings": 61987,
+          "places": 426,
+          "health": 88
+        }
+      },
+      "osm_live_source_run": "p4-live-south-v1-20261014-r2",
+      "osm_live_source_counts": {
+        "roads": 18553,
+        "buildings": 61987,
+        "places": 426,
+        "health": 88
+      },
+      "access_buffer_km": 15,
+      "routing_query_bounds_wgs84": [
+        84.94737082935349,
+        27.74463376832224,
+        85.45265228041409,
+        28.23535955650477
+      ],
+      "routing_tiles_per_layer": 2,
+      "model_sha256": "a2701cfcfbaa1d6facba585cb835aeff95607dadf6d6647ce84cb1d7fe380d46",
+      "config_sha256": "8b2a516ae606df214265d34c46b178b155f8885d2c2a139e6ea8fd2ae437b406",
+      "wall_seconds": 292.48,
+      "access": [
+        {
+          "scenario": "A",
+          "closed_road_km": 22.61,
+          "closed_bridges": 13,
+          "counts": {
+            "connected": 862,
+            "degraded": 83,
+            "cut_off": 65,
+            "unknown": 172
+          }
+        },
+        {
+          "scenario": "B",
+          "closed_road_km": 1.78,
+          "closed_bridges": 3,
+          "counts": {
+            "connected": 1002,
+            "degraded": 8,
+            "cut_off": 0,
+            "unknown": 172
+          }
+        },
+        {
+          "scenario": "C",
+          "closed_road_km": 0.24,
+          "closed_bridges": 3,
+          "counts": {
+            "connected": 1008,
+            "degraded": 2,
+            "cut_off": 0,
+            "unknown": 172
+          }
+        }
+      ],
+      "cache_assets": {
+        "roads": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/832a3b98f331/2026-07-27T000000Z/6bbb7ceaeaa1f683/roads.parquet",
+          "sha256": "d3e18e9b17fbecbc2120543755ec3eaaf566dcc8ec562cc358ca7a5988c37e55"
+        },
+        "buildings": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/832a3b98f331/2026-07-27T000000Z/6bbb7ceaeaa1f683/buildings.parquet",
+          "sha256": "170aada63466693172eaaf4188a9dea0d89bca1733046a5a5c90c27104d4345a"
+        },
+        "places": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/832a3b98f331/2026-07-27T000000Z/6bbb7ceaeaa1f683/places.parquet",
+          "sha256": "32746fb39fd3cfe49c5b76504f0e189078ef273453c15d2b750f72a5e9e9837c"
+        },
+        "health": {
+          "path": "cache/dated_osm/5f116dece2e2c824/osm/832a3b98f331/2026-07-27T000000Z/6bbb7ceaeaa1f683/health.parquet",
+          "sha256": "aef1b1b8aab2798dfd040ba5c0323a50a445648e440443cd1179c0f6118c04ea"
+        }
+      }
+    },
+    {
+      "run_id": "p4-live-deir-v1-20261014-r2",
+      "aoi_bbox": [
+        40.05,
+        35.25,
+        40.25,
+        35.4
+      ],
+      "event_datetime": "2026-05-25T00:00:00+00:00",
+      "osm_snapshot": "2026-05-01T00:00:00+00:00",
+      "model_version": "cutoff_unet_v1.pt",
+      "exposure": {
+        "buildings_by_class": {
+          "flood_high": 0,
+          "rule_increase": 86,
+          "rule_decrease": 123,
+          "flood_possible": 2
+        },
+        "road_km_by_class": {
+          "flood_high": 0.4052,
+          "rule_increase": 5.5453,
+          "rule_decrease": 12.6136,
+          "flood_possible": 1.0354
+        },
+        "bridges_by_class": {
+          "flood_high": 0,
+          "rule_increase": 0,
+          "rule_decrease": 3,
+          "flood_possible": 0
+        }
+      },
+      "warnings": [
+        "change-rule noise estimated from 'hand>60' (AOI has little high terrain)"
+      ],
+      "timings_s": {
+        "s1": 39.4751,
+        "terrain": 22.2819,
+        "s2": 0.402,
+        "model": 11.3503,
+        "disturbance": 0.7852,
+        "gating": 0.7563,
+        "vectorize": 1.5051,
+        "osm": 44.3644,
+        "settlements": 1.7692,
+        "exposure": 8.7644,
+        "access": 51.7455,
+        "report": 2.4232
+      },
+      "pdf_pages": 1,
+      "contracts": "pass",
+      "dashboard_scenarios": "pass",
+      "results_sha256": "1c0b5372be42579f579b84994238fa7f408060377cca46d9e3a794ff3dd66ab4",
+      "mode": "fast",
+      "osm": {
+        "osm_snapshot": "2026-05-01T00:00:00Z",
+        "osm_api": "v2",
+        "counts": {
+          "roads": 4668,
+          "buildings": 5510,
+          "places": 50,
+          "health": 3
+        }
+      },
+      "osm_live_source_run": "p4-live-deir-v1-20261014-r2",
+      "osm_live_source_counts": {
+        "roads": 4668,
+        "buildings": 5510,
+        "places": 50,
+        "health": 3
+      },
+      "access_buffer_km": 15,
+      "routing_query_bounds_wgs84": [
+        39.88482742464241,
+        35.11475776455677,
+        40.41515846245659,
+        35.53523595891988
+      ],
+      "routing_tiles_per_layer": 2,
+      "model_sha256": "a2701cfcfbaa1d6facba585cb835aeff95607dadf6d6647ce84cb1d7fe380d46",
+      "config_sha256": "8b2a516ae606df214265d34c46b178b155f8885d2c2a139e6ea8fd2ae437b406",
+      "wall_seconds": 185.79,
+      "access": [
+        {
+          "scenario": "A",
+          "closed_road_km": 117.8,
+          "closed_bridges": 5,
+          "counts": {
+            "connected": 63,
+            "degraded": 28,
+            "cut_off": 77,
+            "unknown": 2
+          }
+        },
+        {
+          "scenario": "B",
+          "closed_road_km": 1.78,
+          "closed_bridges": 1,
+          "counts": {
+            "connected": 167,
+            "degraded": 1,
+            "cut_off": 0,
+            "unknown": 2
+          }
+        },
+        {
+          "scenario": "C",
+          "closed_road_km": 0.02,
+          "closed_bridges": 1,
+          "counts": {
+            "connected": 168,
+            "degraded": 0,
+            "cut_off": 0,
+            "unknown": 2
+          }
+        }
+      ],
+      "cache_assets": {
+        "roads": {
+          "path": "cache/dated_osm/5fa7bf3eaeaad1fe/osm/87f63785d031/2026-05-01T000000Z/9a98bc9ff7f20c05/roads.parquet",
+          "sha256": "5f8621a4880164b1351310a9d5873ce09f2f6681e5919a24da7b409508e5dfc8"
+        },
+        "buildings": {
+          "path": "cache/dated_osm/5fa7bf3eaeaad1fe/osm/87f63785d031/2026-05-01T000000Z/9a98bc9ff7f20c05/buildings.parquet",
+          "sha256": "21692f442cc324286eef04cb331e3bc32d73ce0b859933b8654e675946d5ed45"
+        },
+        "places": {
+          "path": "cache/dated_osm/5fa7bf3eaeaad1fe/osm/87f63785d031/2026-05-01T000000Z/9a98bc9ff7f20c05/places.parquet",
+          "sha256": "fcf7df8291e17e2821253623b31c9cccbac3b9e046d651cee1d3d3a83b239514"
+        },
+        "health": {
+          "path": "cache/dated_osm/5fa7bf3eaeaad1fe/osm/87f63785d031/2026-05-01T000000Z/9a98bc9ff7f20c05/health.parquet",
+          "sha256": "4c1cd64476c25eed4358e5eed80d1a77477be556fc2ee8a6775ebc9b0ede26dc"
+        }
+      }
+    }
+  ]
+}

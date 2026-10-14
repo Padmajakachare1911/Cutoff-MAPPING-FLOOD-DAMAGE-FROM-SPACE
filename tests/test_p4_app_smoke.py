@@ -1,48 +1,88 @@
+import importlib.util
+import json
+import threading
 from pathlib import Path
+from urllib.request import urlopen
 
-from streamlit.testing.v1 import AppTest
+import numpy as np
 
 from cutoff.mock import make_mock_run
 
-APP = Path(__file__).resolve().parents[1] / 'app' / 'streamlit_app.py'
+ROOT = Path(__file__).resolve().parents[1]
+SERVER = ROOT / "app" / "server.py"
 
 
-def test_mock_app_scenarios_and_downloads(tmp_path, monkeypatch):
-    make_mock_run(tmp_path / 'demo_mock')
-    monkeypatch.setenv('CUTOFF_OUTPUT_DIR', str(tmp_path))
-    app = AppTest.from_file(str(APP), default_timeout=30).run()
-    assert not app.exception
-    assert next(item.value for item in app.selectbox if item.label == 'Model') == 'Checkpoint'
-    assert next(item.value for item in app.text_input if item.label == 'Checkpoint path').endswith('cutoff_unet_v1.pt')
-    assert any('Educational prototype' in item.value for item in app.warning)
-    initial = next(m.value for m in app.metric if m.label == 'Cut off')
-    app.sidebar.radio[0].set_value('B').run()
-    assert not app.exception
-    after = next(m.value for m in app.metric if m.label == 'Cut off')
-    assert initial == '2' and after == '1'
-    assert any('MOCK DATA' in warning.value for warning in app.warning)
+def load_server(output):
+    spec = importlib.util.spec_from_file_location("cutoff_dashboard_server", SERVER)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.OUTPUT = output.resolve()
+    return module
 
 
-def test_error_run_shows_pair_message(tmp_path, monkeypatch):
-    import json
-    root = tmp_path / 'bad'
+def get_json(base, path):
+    with urlopen(base + path) as response:
+        return json.load(response)
+
+
+def test_local_dashboard_serves_mock_scenarios_and_downloads(tmp_path):
+    make_mock_run(tmp_path / "demo_mock")
+    module = load_server(tmp_path)
+    server = module.create_server("127.0.0.1", 0)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    base = f"http://127.0.0.1:{server.server_port}"
+    try:
+        with urlopen(base + "/") as response:
+            page = response.read().decode()
+        assert "Cutoff" in page and "RUN ANALYSIS" in page
+        assert get_json(base, "/api/runs")[0]["id"] == "demo_mock"
+        payload = get_json(base, "/api/runs/demo_mock")
+        assert payload["results"]["access"][0]["counts"]["cut_off"] == 2
+        assert payload["results"]["access"][1]["counts"]["cut_off"] == 1
+        map_data = get_json(base, "/api/map-data/demo_mock?scenario=B")
+        assert map_data["scenario"] == "B"
+        assert map_data["vectors"]["settlements"]["features"]
+        assert map_data["vectors"]["hazard_polygons"]["features"]
+        assert map_data["vectors"]["derived_flow"]["features"][0]["properties"]["direction"] == "downhill"
+        with urlopen(base + "/api/layers/demo_mock/hazard.png") as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert response.read(8) == b"\x89PNG\r\n\x1a\n"
+        with urlopen(base + "/api/files/demo_mock/results.json") as response:
+            assert response.headers["Content-Disposition"].startswith("attachment")
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_error_run_is_returned(tmp_path):
+    root = tmp_path / "bad"
     root.mkdir()
-    (root / 'error.json').write_text(json.dumps({'error_type': 'NoValidPair', 'message': 'Tracks seen: 85; next pass'}))
-    monkeypatch.setenv('CUTOFF_OUTPUT_DIR', str(tmp_path))
-    app = AppTest.from_file(str(APP), default_timeout=30).run()
-    assert not app.exception
-    assert any('Tracks seen: 85; next pass' in error.value for error in app.error)
+    (root / "error.json").write_text(json.dumps({"error_type": "NoValidPair", "message": "Tracks seen: 85"}))
+    module = load_server(tmp_path)
+    assert module.read_run("bad")["error"]["message"] == "Tracks seen: 85"
+
+
+def test_dashboard_and_missing_model_argument_default_to_v1(tmp_path, monkeypatch):
+    module = load_server(tmp_path)
+    monkeypatch.setattr(module, "ROOT", tmp_path)
+    checkpoint = tmp_path / "models" / "cutoff_unet_v1.pt"
+    checkpoint.parent.mkdir()
+    checkpoint.write_bytes(b"checkpoint-selection fixture")
+    args = module.validate_launch({"bbox": "85.28,28.10,85.42,28.29", "event": "2026-08-26T02:52:00Z"})
+    assert args[3] == str(checkpoint)
+    page = (ROOT / "app/static/index.html").read_text(encoding="utf-8")
+    assert 'id="checkpoint-option" checked' in page
+    assert 'value="b0" checked' not in page
 
 
 def test_raster_overlay_uses_mercator_and_masks_nodata(tmp_path):
-    import importlib.util
-
-    import numpy as np
-    root = make_mock_run(tmp_path / 'mock')
-    spec = importlib.util.spec_from_file_location('map_layers', APP.with_name('map_layers.py'))
+    root = make_mock_run(tmp_path / "mock")
+    path = ROOT / "app" / "map_layers.py"
+    spec = importlib.util.spec_from_file_location("map_layers", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    image, bounds = module.raster_overlay(root / 'hazard_class.tif', 'hazard')
+    image, bounds = module.raster_overlay(root / "hazard_class.tif", "hazard")
     assert image.shape[-1] == 4 and image.dtype == np.uint8
     assert bounds[0][0] < bounds[1][0] and bounds[0][1] < bounds[1][1]
     assert np.any(image[..., 3] == 0)

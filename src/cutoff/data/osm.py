@@ -135,6 +135,10 @@ def parse_layer(raw: gpd.GeoDataFrame, layer: str) -> gpd.GeoDataFrame:
     out = out.loc[out.geometry.notna() & ~out.geometry.is_empty].copy()
     if layer in {"roads", "buildings"} and len(out):
         out = out.explode(index_parts=False, ignore_index=True)
+    if layer == "roads":
+        # A highway-tagged area is not a routing centreline. Polygon.coords
+        # raises in network noding (observed in the real south AOI).
+        out = out.loc[out.geom_type.eq("LineString")].copy()
     return out[OUTPUT_COLUMNS[layer]]
 
 
@@ -152,7 +156,7 @@ def _request_v2(aoi, layer: str, snapshot_iso: str, cfg: dict[str, Any]) -> gpd.
     for attempt in range(3):
         try:
             response = httpx.post(f"{base}/extraction/features.parquet", json=payload,
-                                  headers={"authorization": key}, timeout=120.0)
+                                  headers={"authorization": key}, timeout=240.0)
             response.raise_for_status()
             result = _read_v2(response.content)
             result.attrs["osm_api"] = "v2"
@@ -166,6 +170,10 @@ def _request_v2(aoi, layer: str, snapshot_iso: str, cfg: dict[str, Any]) -> gpd.
                         retry_after = float(exc.response.headers.get("retry-after", 0))
                     except ValueError:
                         retry_after = 0.0
+                    if exc.response.status_code == 429:
+                        # HeiGIT uses a sliding 60-second extraction limit. Short
+                        # retries can exhaust every attempt before it clears.
+                        retry_after = max(retry_after, 60.0)
                 time.sleep(max(retry_after, 5.0 * (2 ** attempt)))
     raise RuntimeError(f"ohsome v2 failed after 3 attempts: {last}") from last
 
@@ -244,7 +252,7 @@ def stage_osm(ctx: RunContext) -> dict:
     """Write the four contract OSM layers in the run grid CRS."""
     assert_pre_event(ctx.osm_snapshot, ctx.event_datetime)
     settings = _osm_cfg(ctx.cfg)
-    tile_deg = float(settings.get("tile_deg", 0.1))
+    tile_deg = float(settings.get("tile_deg", 0.5))
     base_aoi = box(*ctx.aoi_bbox)
     access_aoi = _access_aoi(ctx)
     counts: dict[str, int] = {}
@@ -263,7 +271,7 @@ def stage_osm(ctx: RunContext) -> dict:
                 part = fetch_layer(tile.intersection(extent), layer, ctx.osm_snapshot, ctx.cfg)
                 apis.add(part.attrs.get("osm_api", "v2"))
                 pieces.append(part)
-                delay = float(settings.get("request_delay_s", 0.5))
+                delay = float(settings.get("request_delay_s", 4.1))
                 if delay > 0:
                     time.sleep(delay)
             frame = gpd.GeoDataFrame(pd.concat(pieces, ignore_index=True), crs=4326)
@@ -275,6 +283,9 @@ def stage_osm(ctx: RunContext) -> dict:
             ctx.warn(STAGE, f"ohsome unavailable for {layer}; using matching cached pre-event OSM: {exc}")
             frame = gpd.read_parquet(cache_path)
             apis.add("cache")
+        if layer == "roads":
+            # Apply the same contract to dated caches created before this fix.
+            frame = frame.loc[frame.geom_type.eq("LineString")].copy()
         frame = frame.to_crs(ctx.grid.crs)
         frame.to_file(ctx.path(f"osm_{layer}"), driver="GPKG")
         counts[layer] = len(frame)

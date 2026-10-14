@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#000000">
+  <title>Cutoff · Valley intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+  <link rel="stylesheet" href="/static/controls.css">
+</head>
+<body>
+  <div class="grain"></div>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark"><i data-lucide="triangle"></i></span><span><b>CUTOFF</b><small>VALLEY INTELLIGENCE</small></span></a>
+    <div class="topbar-center"><span><i data-lucide="satellite"></i>SENTINEL EVIDENCE</span><span><i data-lucide="mountain-snow"></i>3D TERRAIN</span><span><i data-lucide="route"></i>ACCESS MODEL</span></div>
+    <div class="server-pill"><span class="pulse"></span><span id="server-status">LOCAL / ONLINE</span></div>
+  </header>
+  <div class="disclaimer"><i data-lucide="shield-alert"></i><span id="disclaimer">Educational prototype — not an operational tool.</span></div>
+  <div class="shell">
+    <aside>
+      <div class="aside-title"><span>MISSION CONTROL</span><b>01</b></div>
+      <form id="run-form">
+        <label><span><i data-lucide="mountain-snow"></i>Valley preset</span><select id="valley-preset"><option value="trishuli">Bhote Koshi · Trishuli</option><option value="deir">Deir ez-Zor · Euphrates</option><option value="custom">Custom coordinates</option></select></label>
+        <label><span><i data-lucide="scan-line"></i>Analysis bounds</span><small>W · S · E · N</small><input name="bbox" id="bbox" value="85.28,28.10,85.42,28.29" required></label>
+        <label><span><i data-lucide="calendar-clock"></i>Event UTC</span><input name="event" id="event-time" value="2026-08-26T02:52:00Z" required></label>
+        <label><span><i data-lucide="database"></i>OSM snapshot</span><small>PRE-EVENT</small><input name="snapshot" id="snapshot" required></label>
+        <div class="choice-title"><i data-lucide="gauge"></i><span>PROCESSING MODE</span></div>
+        <div class="choice-grid mode-grid">
+          <label class="choice"><input type="radio" name="mode" value="cached" checked><span><b>Cached</b><small>Fastest · local data</small></span></label>
+          <label class="choice"><input type="radio" name="mode" value="fast"><span><b>Fast</b><small>Cloud acquisition</small></span></label>
+          <label class="choice"><input type="radio" name="mode" value="full"><span><b>Full</b><small>SNAP processing</small></span></label>
+        </div>
+        <div class="choice-title"><i data-lucide="brain-circuit"></i><span>FLOOD MODEL</span></div>
+        <div class="choice-grid model-grid">
+          <label class="choice"><input type="radio" name="model" value="b0"><span><b>B0 baseline</b><small>No checkpoint needed</small></span></label>
+          <label class="choice"><input type="radio" name="model" id="checkpoint-option" checked><span><b>U-Net v1</b><small>Trained checkpoint</small></span></label>
+        </div>
+        <details class="advanced"><summary><i data-lucide="settings-2"></i>Advanced storage</summary><label><span><i data-lucide="folder-cog"></i>Cache directory</span><input name="cache" id="cache"></label></details>
+        <button type="submit" class="primary"><span>RUN ANALYSIS</span><i data-lucide="arrow-up-right"></i></button>
+        <p class="form-message" id="form-message"></p>
+      </form>
+      <div class="history-head"><span>RUN ARCHIVE</span><button id="refresh-runs" title="Refresh runs"><i data-lucide="refresh-cw"></i></button></div>
+      <div id="run-list" class="run-list"></div>
+      <div class="aside-foot"><i data-lucide="radio-tower"></i><span>LOCAL PROCESSING NODE<br><b>127.0.0.1:8000</b></span></div>
+    </aside>
+    <main>
+      <section class="hero">
+        <div>
+          <div class="overline"><span id="run-state">AWAITING RUN</span><i></i><span>FLOOD RESPONSE SYSTEM</span></div>
+          <h1 id="run-title">See the valley.<br><em>Read the impact.</em></h1>
+          <p id="run-meta">Select a completed run to enter the terrain intelligence view.</p>
+        </div>
+        <div class="scenario-wrap"><span>ACCESS POLICY</span><div class="scenario-control">
+          <button data-scenario="A" class="active"><b>A</b><span><strong>Precautionary</strong><small>Any hazard contact</small></span></button>
+          <button data-scenario="B"><b>B</b><span><strong>Priority</strong><small>High confidence</small></span></button>
+          <button data-scenario="C"><b>C</b><span><strong>Bridges</strong><small>Approaches only</small></span></button>
+        </div></div>
+      </section>
+      <div id="alerts"></div>
+      <section class="metrics" id="metrics">
+        <div class="metric skeleton"></div><div class="metric skeleton"></div><div class="metric skeleton"></div><div class="metric skeleton"></div>
+      </section>
+      <section class="map-zone">
+        <div class="map-card">
+          <div class="map-edge-label"><i data-lucide="orbit"></i><span>VALLEY VIEW / LIVE COMPOSITE</span></div>
+          <iframe id="map" title="3D satellite terrain, hazard, and access map"></iframe>
+          <div class="map-empty" id="map-empty"><div class="radar"><i data-lucide="mountain"></i></div><b>NO TERRAIN LOADED</b><span>Select a run from the archive</span></div>
+        </div>
+        <div class="intel-panel" id="details"><div class="panel-kicker">FIELD INTELLIGENCE</div><h2>Situation<br>summary</h2><p class="muted">Scenario intelligence will appear after a run is selected.</p></div>
+      </section>
+      <section class="data-grid">
+        <article class="data-card"><div class="card-head"><span><i data-lucide="waves"></i>HAZARD EVIDENCE</span><b>01</b></div><div id="hazard-table"></div></article>
+        <article class="data-card"><div class="card-head"><span><i data-lucide="building-2"></i>EXPOSURE</span><b>02</b></div><div id="exposure-table"></div></article>
+        <article class="data-card"><div class="card-head"><span><i data-lucide="download"></i>EXPORTS</span><b>03</b></div><div id="downloads" class="downloads"></div></article>
+      </section>
+      <footer><div><span class="footer-mark">CUTOFF</span><span>Mapping flood exposure and access from space</span></div><div id="attribution"></div></footer>
+    </main>
+  </div>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

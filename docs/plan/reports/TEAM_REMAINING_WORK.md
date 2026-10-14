@@ -10,10 +10,10 @@ Checked 14 October 2026 against `00_MASTER_PLAN.md` sections 1, 4 and 7, the fou
 |---|---|---|
 | **P1** | No unfinished core acquisition/terrain/S2/SNAP implementation was identified. Keep documented backend and DEM limitations. | Ensure every teammate can use the uploaded cache, especially Trishuli south; verify live inputs on the submission machine and supply the real/cold acquisitions required by P4. The uploaded Drive link is recorded in P1.8; the older checklist's upload-pending entry was stale. |
 | **P2** | No required new model training. V1 defaults and pending gating/evidence/report work are integrated. | Confirm released v1 SHA and model statistics/thresholds in the final product; carry real-scene/calibration limitations into the final report. The project-wide freeze is a later P4/team step. Missing optional isolated-difference/flip ablations are not invented or run on submission day. |
-| **P3** | The direct-stage cache repair is included: exact UTC snapshot, AOI, routing buffer and filters identify the cache; other-date fallback is forbidden. Stable v2 endpoint updated. No additional core algorithm implementation identified. | Obtain ohsome v2 access or verified dated caches for roads/places/health over the full 15 km routing buffer and buildings in each AOI. Complete real settlements/exposure/A-B-C routing, live bonus flow-path acceptance, real E6 scenario/dropout measurements and post-freeze transport comparison when applicable. |
-| **P4** | Core product/evaluation/runtime/report tooling is implemented. No missing basic dashboard/PDF implementation was identified. | Complete real north/south plus non-Trishuli runs; validate full exposure/access and dashboard/PDF; conduct independent fresh-clone and unprepared-AOI rehearsal; intentionally freeze reviewed clean code/config/v1; run E4 once; collect real E6 and prescribed cold-size E7; refresh the six-page report/checklist. Resolve organiser questions, record the deferred <=3-minute video if required, and perform final submission. |
+| **P3** | The direct-stage cache repair is included: exact UTC snapshot, AOI, routing buffer and filters identify the cache; other-date fallback is forbidden. Stable v2 endpoint updated. No additional core algorithm implementation identified. | Real v2 OSM acquisition, full 15 km routing coverage, settlements/exposure/A-B-C integration now pass for all three case studies. Live bonus flow-path acceptance, real E6 dropout measurements and post-freeze transport comparison remain pending. |
+| **P4** | Core product/evaluation/runtime/report tooling is implemented. No missing basic dashboard/PDF implementation was identified. | Real north/south/Deir exposure/access, contracts and dashboard/PDF checks now pass (warm satellite caches; south final rerun uses its fresh OSM cache). Conduct independent fresh-clone and unprepared-AOI rehearsal; intentionally freeze reviewed clean code/config/v1; run E4 once; collect real E6 and prescribed cold-size E7; refresh the six-page report/checklist. Resolve organiser questions, record the deferred <=3-minute video if required, and perform final submission. |
 
-The immediate critical path is **OSM access + verified dated coverage -> complete real integration -> intentional freeze -> E4/E6 -> final report/rehearsal/submission**. More model training does not resolve those blockers.
+The OSM access/coverage blocker and three-case real integration are now resolved on `p4/live-integration-unblock`; see [P4_LIVE_INTEGRATION.md](P4_LIVE_INTEGRATION.md). The remaining critical path is **reviewed integration -> independent rehearsal/intentional freeze -> E4/E6/cold E7 -> final report/submission**.
 
 ## P1 task mapping
 
@@ -50,11 +50,11 @@ The immediate critical path is **OSM access + verified dated coverage -> complet
 
 | Plan task | Verified status | Evidence / qualification |
 |---|---|---|
-| P3.0 OSM recon | Historical v2 north-AOI recon complete | Four small dated fixtures and recorded counts/columns. This is not full 15 km buffer coverage or a key configured on this laptop. |
+| P3.0 OSM recon | Historical v2 north-AOI recon complete | Four small dated fixtures and recorded counts/columns. These small historical fixtures alone were not full buffer coverage; subsequent P4 live integration acquired the full 15 km case-study extents. |
 | P3.1 OSM stage | Implemented/tested; cache identity repaired | Adopted the latest main date-isolation update, removed its unsafe other-date fallback, canonicalized time zones/subseconds and bound AOI/buffer/filters. Matching cache reuse and rejection of other dates are regression-tested. Existing unverified caches are not automatically migrated. |
-| P3.2 settlements/targets | Implemented/tested | Real complete-run acceptance awaits the required buffered OSM. |
-| P3.3 exposure | Implemented/tested | Actual algorithm integration passes synthetic acquisition; real asset exposure remains unmeasured in the partial runs. |
-| P3.4 access | Implemented/tested | Noding, grade/bridge/parallel-edge handling, scenarios and four statuses tested. Real routing completeness not established. |
+| P3.2 settlements/targets | Implemented/tested | Real north/south/Deir integration now passes with dated 15 km buffered OSM. |
+| P3.3 exposure | Implemented/tested | Synthetic acquisition and real north/south/Deir asset exposure pass; source evidence is in P4_LIVE_INTEGRATION.md. |
+| P3.4 access | Implemented/tested | Noding, grade/bridge/parallel-edge handling, scenarios and four statuses tested. Real three-case A/B/C integration now passes; unknown mapped access remains explicitly unknown. |
 | P3.5 bonus flowpath | Implemented/tested on synthetic data | Live Lhende/Bhote Koshi/Trishuli path and named-place acceptance map remain pending; current cached-mode flowpath is skipped. |
 | P3.6 E6 | Tooling implemented; real evidence pending | Frozen scenario/Jaccard/20-run dropout table and post-freeze external transport check required by the plan. |
 
@@ -67,7 +67,7 @@ The immediate critical path is **OSM access + verified dated coverage -> complet
 | P4.2 one-page sitrep | Implemented/tested | Strict escaped template, attribution and Windows PDF fallback. |
 | P4.3 dashboard | Implemented/tested | V1 checkpoint selected by default; scenario toggle, error state and map overlays tested. |
 | P4.4 CI/install/README | Implemented; isolated wheel evidence recorded | Independent teammate fresh-clone case-study rehearsal still pending. |
-| P4.5 full C1/C2/freeze | Synthetic integration passes; real acceptance incomplete | Existing real hazard/PDF runs explicitly have unavailable OSM/access. No clean project freeze is created by this merge task. |
+| P4.5 full C1/C2/freeze | Synthetic and three-case real integration pass; freeze/rehearsal pending | Subsequent P4 live evidence includes full dated OSM, exposure/access, dashboard and PDF. No clean project freeze is created by this work. |
 | P4.6 E4 | Guarded harness implemented/tested | Actual once-only comparison, tile figure and human disagreement taxonomy await final integration/freeze. |
 | P4.7 E7 | Collector implemented; partial/warm-cache timings recorded | Cold 10/20/40 km B0/checkpoint sweep and <=10-minute 20 km target remain unverified. |
 | P4.8 six-page report | Report/PDF/builder integrated | Must be refreshed after actual E4/E6/cold-runtime results; existing figures/timings are explicitly historical, before these gates/default changes. |
@@ -77,12 +77,12 @@ The immediate critical path is **OSM access + verified dated coverage -> complet
 
 | Purpose | Configuration | Current local status |
 |---|---|---|
-| **Historic OSM extraction** | **`OHSOME_API_KEY`** from [HeiGIT account](https://account.heigit.org/signup) | **Missing; immediate blocker.** Use the key for historical extraction, not an OSM website login or generic map-tile token. |
+| **Historic OSM extraction** | **`OHSOME_API_KEY`** from [HeiGIT account](https://account.heigit.org/signup) | **Configured and authenticated on the P4 machine.** Full dated 15 km routing coverage and buildings acquired for north/south/Deir; see P4_LIVE_INTEGRATION.md. Other machines need private configuration or these verified caches. |
 | Fast Sentinel-1/2 | `SH_CLIENT_ID`, `SH_CLIENT_SECRET` | Present; local OAuth authenticated. Each submission machine needs working values. |
 | SNAP/full download | `CDSE_USERNAME`, `CDSE_PASSWORD`; local `SNAP_GPT` executable | Needed only for full mode; check on the machine actually used. S3 credentials are an alternative download route, not required when OData works. |
 | Hugging Face download | `HF_TOKEN` if the selected download needs it | No new Kuro download/training is needed to use the existing v1 release. |
 
-HeiGIT's 8 October release notice specifies the stable base `https://api.heigit.org/ohsome-api/v2/`; `/v2-rc` is deprecated. The integrated configuration and request default now use the stable base. Live extraction still needs a real key. Source: [official release notice](https://heigit.org/ohsome-2-0-has-arrived-2/), [API access and free standard key](https://api.heigit.org/), [historical extraction API](https://docs.ohsome.org/ohsome-api/v2/reference/api.html).
+HeiGIT's 8 October release notice specifies the stable base `https://api.heigit.org/ohsome-api/v2/`; `/v2-rc` is deprecated. The integrated configuration and request default now use the stable base. The P4 machine now has a privately supplied key and verified three-case extraction. Source: [official release notice](https://heigit.org/ohsome-2-0-has-arrived-2/), [API access and free standard key](https://api.heigit.org/), [historical extraction API](https://docs.ohsome.org/ohsome-api/v2/reference/api.html).
 
 Add `OHSOME_API_KEY=...` directly to the ignored local `.env` or the process environment. Do not put the actual key in Git, issues or this document. If using caches instead, require verified acquisition provenance, the exact pre-event snapshot and full buffered routing coverage. Trishuli uses 2026-07-27; Deir's May event needs an earlier snapshot such as 2026-05-01. The cache identity repair is included; a key alone does not prove that complete routing coverage was acquired.
 
@@ -92,4 +92,4 @@ The previous main audit recorded 164 executed offline cases passing across the f
 
 For this integration, five behavioral default-selection tests were observed failing before the repair. The focused pipeline/inference/dashboard suite passed **24 tests in 42.25 seconds** afterward. The final combined-suite and publication verification is recorded in `V1_MAIN_INTEGRATION.md`. No test-only reference evaluation, paid live scene acquisition, new model training or new real-scene selection occurred in this merge task.
 
-The master plan's final definition of done is not fully met until complete real runs, real E4/E6 evidence, the intentional freeze, independent rehearsal and final submission assets are verified. Do not replace those unchecked gates with green unit-test or merge status.
+Complete real case-study integration is now verified; the master plan's final definition of done still requires real E4/E6/cold E7 evidence, the intentional freeze, independent rehearsal and final submission assets. Do not replace those unchecked gates with green unit-test or merge status.

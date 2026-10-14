@@ -30,10 +30,10 @@ it does not certify the entire project ready for submission.
 
 ## Team / data / final submission gates still open
 
-- [x] Underlying OSM cache identity fixed in the integration: exact UTC date/AOI/buffer/filters; other-date fallback removed (#25). No actual missing OSM data is claimed acquired.
-- [ ] Ohsome v2 key or verified dated **15 km buffered** OSM caches available (#31).
+- [x] Underlying OSM cache identity fixed in the integration: exact UTC date/AOI/buffer/filters; other-date fallback removed (#25). Real dated buffered OSM acquisition is now verified in the live integration report.
+- [x] Ohsome v2 authenticated and real dated **15 km buffered** OSM acquired for north/south/Deir; #31 repair and evidence in [P4_LIVE_INTEGRATION.md](P4_LIVE_INTEGRATION.md).
 - [x] This laptop's Sentinel Hub OAuth client/secret authenticated during the 14 October integration audit. Other teammates still need their own working credentials.
-- [ ] Complete real fast-mode Trishuli + non-Trishuli runs, exposure/access and fresh-clone case study verified.
+- [x] Complete real north/south/Deir exposure, A/B/C access, contracts, one-page PDF and dashboard verified. Satellite caches are warm; south's final rerun uses its newly acquired matching OSM cache.
 - [ ] Independent teammate fresh-clone test and an independently chosen unprepared AOI rehearsed.
 - [ ] Organiser questions answered (cached/fast acceptance, Kuro preprocessing, Nepali PDF, encoder weights).
 - [ ] Final code/config/checkpoint reviewed; clean `frozen-v1` tag created **before** real E4.
@@ -44,7 +44,7 @@ it does not certify the entire project ready for submission.
 - [ ] Demo video <=3:00: **deferred explicitly by the user; no video created**.
 - [ ] Final competition submission performed by the team.
 
-## Exact next commands after data is ready
+## Exact next commands after reviewed integration
 
 ```text
 cutoff run --bbox 85.28,28.10,85.42,28.29 --event 2026-08-26T02:52:00Z --mode fast --model models/cutoff_unet_v1.pt --run-id trishuli_north_frozen
@@ -66,3 +66,11 @@ cache helper consistently choose model-v1 unless explicitly overridden. No v2
 experiment code or weights are included. See [TEAM_REMAINING_WORK.md](TEAM_REMAINING_WORK.md)
 for the task-by-task master-plan audit; source implementation does not imply the
 unchecked real-data acceptance gates above are complete.
+
+## Live integration update
+
+Issue #31 has been reproduced and repaired on `p4/live-integration-unblock`.
+Private authentication passed; OSM request pacing/429 recovery and a highway-area
+parsing failure were fixed. All three final runs completed. Final offline suite:
+**188 passed, 1 skipped, 4 deselected**. See [P4_LIVE_INTEGRATION.md](P4_LIVE_INTEGRATION.md)
+for provenance, the cached south rerun and remaining submission boundaries.

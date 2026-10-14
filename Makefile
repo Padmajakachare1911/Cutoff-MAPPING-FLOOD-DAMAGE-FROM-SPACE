@@ -18,7 +18,7 @@ run-trishuli:     ## case study (cached mode needs cache/ prepared by P1)
 	cutoff run --bbox $(AOI_TRISHULI) --event $(EVENT_TRISHULI) --mode cached --model models/cutoff_unet_v1.pt
 
 app:
-	streamlit run app/streamlit_app.py
+	$(PY) app/server.py
 
 eval-kuro:        ## E1/E2/E3/E8 (P2)
 	cutoff eval-kuro --checkpoint models/cutoff_unet_v1.pt --strata slope
