@@ -20,6 +20,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+/build/
+/dist/
 .ipynb_checkpoints/
 
 # os / editors

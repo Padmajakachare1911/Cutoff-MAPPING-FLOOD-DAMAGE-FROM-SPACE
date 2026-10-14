@@ -26,6 +26,7 @@ import importlib
 import json
 import math
 import re
+import sys
 import threading
 import time
 import uuid
@@ -139,9 +140,8 @@ class PeakRSS:
 
 def load_config(path=None):
     if path is None:
-        path = Path(__file__).resolve().parent / "resources" / "default.yaml"
-        if not path.exists():
-            path = Path(__file__).resolve().parents[2] / "configs" / "default.yaml"
+        checkout = Path(__file__).resolve().parents[2] / "configs" / "default.yaml"
+        path = checkout if checkout.is_file() else Path(sys.prefix) / "share" / "cutoff" / "configs" / "default.yaml"
     return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
 
