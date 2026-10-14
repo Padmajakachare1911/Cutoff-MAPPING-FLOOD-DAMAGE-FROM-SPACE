@@ -97,6 +97,46 @@ def test_stage_model_b0_on_mock_run(mock_src, tmp_path):
     assert np.nanmean(p[2][np.isin(cls, [1, 2])]) > np.nanmean(p[2][cls == 0]) + 0.3
 
 
+def test_stage_model_without_override_uses_configured_v1(mock_src, tmp_path, monkeypatch):
+    run = tmp_path / 'run'
+    shutil.copytree(mock_src, run)
+    ctx = make_ctx(run, None)
+    expected = str(tmp_path / 'cutoff_unet_v1.pt')
+    ctx.cfg['model']['checkpoint'] = expected
+    selected = []
+    def missing_checkpoint(path, **kwargs):
+        selected.append(str(path))
+        raise FileNotFoundError('model-v1 checkpoint unavailable')
+    monkeypatch.setattr('cutoff.ml.model.load_checkpoint', missing_checkpoint)
+    with pytest.raises(FileNotFoundError, match='model-v1'):
+        stage_model(ctx)
+    assert selected == [expected]
+
+
+def test_cache_aoi_model_default_uses_configured_v1(tmp_path, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    cfg = yaml.safe_load((root / 'configs/default.yaml').read_text())
+    expected = str(tmp_path / 'cutoff_unet_v1.pt')
+    cfg['model']['checkpoint'] = expected
+    config = tmp_path / 'config.yaml'
+    config.write_text(yaml.safe_dump(cfg), encoding='utf-8')
+    selected = []
+    def model_stage(ctx):
+        selected.append(ctx.model_path)
+        return {'model_version': 'cutoff_unet_v1.pt'}
+    monkeypatch.setattr('cutoff.ml.infer.stage_model', model_stage)
+    monkeypatch.setattr('cutoff.contracts_check.validate_run_dir', lambda *args, **kwargs: None)
+    spec = importlib.util.spec_from_file_location('cache_aoi_default_audit', root / 'scripts/cache_aoi.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.main(['--name', 'audit', '--bbox', '85.32,28.14,85.36,28.18', '--event',
+                        '2026-08-26T02:52:00Z', '--stages', 'model', '--config', str(config),
+                        '--out', str(tmp_path / 'run')]) == 0
+    assert selected == [expected]
+
+
 def test_stage_model_checkpoint_on_mock_run(mock_src, tmp_path):
     run = tmp_path / "run"; shutil.copytree(mock_src, run)
     ck = tmp_path / "m.pt"

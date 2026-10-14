@@ -4,8 +4,10 @@ Implements the truth table in docs/plan/05_contracts.md section 2 (later rules o
   1 disturb==1 -> 3 (water/smooth mud), disturb==2 -> 4 (roughness/debris)
   2 p_flood >= tau -> 1
   3 class 1 on steep (> slope_max) or high-HAND (> hand_max) terrain -> 2 ("possible")
-  4 p_permanent >= tau and not model flood -> 5
-  5 S2 present: class 2 + clear-sky water -> 1; class 1 + clear-sky no water (and no radar decrease) -> 2
+  4 p_permanent >= tau and not model flood, on flat low terrain (not steep, not high-HAND) -> 5
+    (radar back-slopes look dark like water; GFM and OPERA DSWx-S1 also exclude such terrain from reference water)
+  5 S2 present: class 2 + clear-sky water -> 1; class 1 + clear-sky no water (and no radar decrease) -> 2;
+    class 5 + clear-sky no water -> back to the class it had before rule 4
   6 shadow/layover, invalid probabilities or invalid disturbance -> 254
 Downgrades never silently delete a detection; the flags record every reason.
 """
@@ -44,7 +46,8 @@ def gate(probs, dist, slope, hand, shadow_layover, s2_water=None, s2_clear=None,
     cls[inc] = HC.RULE_INCREASE
     cls[model_flood] = HC.FLOOD_HIGH
     cls[model_flood & (steep | high)] = HC.FLOOD_POSSIBLE
-    cls[(p_perm >= tau) & ~model_flood & ~invalid_p] = HC.PERMANENT_WATER
+    before_perm = cls.copy()
+    cls[(p_perm >= tau) & ~model_flood & ~invalid_p & ~(steep | high)] = HC.PERMANENT_WATER
 
     if s2_water is not None and s2_clear is not None:
         has = s2_clear != 255
@@ -56,6 +59,8 @@ def gate(probs, dist, slope, hand, shadow_layover, s2_water=None, s2_clear=None,
         downgrade = (cls == HC.FLOOD_HIGH) & clear & ~water & ~dec
         cls[upgrade] = HC.FLOOD_HIGH
         cls[downgrade] = HC.FLOOD_POSSIBLE
+        dry = (cls == HC.PERMANENT_WATER) & clear & ~water   # radar look-alike (dry sand, smooth soil)
+        cls[dry] = before_perm[dry]
 
     sh = np.asarray(shadow_layover, bool)
     flags[sh] |= _u8(Flag.SHADOW_LAYOVER)

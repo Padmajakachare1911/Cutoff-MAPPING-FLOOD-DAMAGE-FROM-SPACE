@@ -12,6 +12,8 @@ def test_mock_app_scenarios_and_downloads(tmp_path, monkeypatch):
     monkeypatch.setenv('CUTOFF_OUTPUT_DIR', str(tmp_path))
     app = AppTest.from_file(str(APP), default_timeout=30).run()
     assert not app.exception
+    assert next(item.value for item in app.selectbox if item.label == 'Model') == 'Checkpoint'
+    assert next(item.value for item in app.text_input if item.label == 'Checkpoint path').endswith('cutoff_unet_v1.pt')
     assert any('Educational prototype' in item.value for item in app.warning)
     initial = next(m.value for m in app.metric if m.label == 'Cut off')
     app.sidebar.radio[0].set_value('B').run()

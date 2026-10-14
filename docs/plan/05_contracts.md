@@ -52,8 +52,8 @@ Evaluated in this order; later rules override earlier ones:
 1. `disturb == 1` → 3; `disturb == 2` → 4
 2. `p_flood ≥ τ` → 1
 3. class 1 and (`slope > 15°` or `HAND > 30 m`) → 2
-4. `p_permanent ≥ τ` and not model flood → 5
-5. S2 present: class 2 and S2 water-agree → 1; class 1 and S2 clear-no-water and not disturb==1 → 2
+4. `p_permanent ≥ τ` and not model flood, and not (`slope > 15°` or `HAND > 30 m`) → 5 (same terrain test as rule 3; amended 2026-10-14, P2: radar back-slopes were mapped as water on Trishuli, E5)
+5. S2 present: class 2 and S2 water-agree → 1; class 1 and S2 clear-no-water and not disturb==1 → 2; class 5 and S2 clear-no-water → the class from rules 1–3 (amended 2026-10-14, P2: dry desert mapped as permanent water at Deir ez-Zor)
 6. shadow/layover or invalid probs or disturb == −1 → 254
 
 ## 3. Vector rules

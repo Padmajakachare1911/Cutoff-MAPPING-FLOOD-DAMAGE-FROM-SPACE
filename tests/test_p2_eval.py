@@ -31,3 +31,21 @@ def test_b0_and_checkpoint_eval_and_markdown(store, tmp_path):  # noqa: F811
     md = ke.to_markdown([rb, rm], [cal])
     assert "E1" in md and "E2" in md and "E8" in md and "514" in md
     json.dumps([rb, rm], default=float)
+
+
+def test_calibration_reports_flood_ece_per_slope_bin(store, tmp_path):  # noqa: F811
+    """E8 per slope bin (P2.11): one row per bin, counts add up to the pooled flood-ECE sample, markdown table."""
+    from cutoff.data.kuro_siwo import KuroSiwoDataset
+    from cutoff.ml.train import train
+    ck = train(store, tmp_path / "r", {"encoder": "resnet18", "pretrained": False, "epochs": 1, "batch_size": 2,
+                                        "num_workers": 0, "max_stat_samples": 10, "name": "unit"})
+    ds = KuroSiwoDataset(store, "val", np.zeros(7), np.ones(7))
+    cal = ke.calibration(ds, str(ck))
+    rows = cal["ece_by_slope"]
+    assert [r["slope_bin"] for r in rows] == ["0-5 deg", "5-15 deg", ">=15 deg"]
+    assert sum(r["n_px"] for r in rows) == cal["n_flood_ece_px"] > 0
+    for r in rows:
+        assert (r["n_px"] == 0) == (r["flood_ece"] is None)
+        assert r["flood_ece"] is None or 0.0 <= r["flood_ece"] <= 1.0
+    md = ke.to_markdown([], [cal])
+    assert "E8 - flood ECE by slope stratum" in md and ">=15 deg" in md

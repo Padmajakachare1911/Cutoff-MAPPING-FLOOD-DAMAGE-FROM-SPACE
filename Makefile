@@ -6,7 +6,7 @@ EVENT_TRISHULI = 2026-08-26T02:52:00Z
 .PHONY: setup test mock run-trishuli app eval-kuro eval-emsr
 
 setup:            ## conda env create -f environment.yml first; then:
-	$(PY) -m pip install -e ".[dev,app,pdf]"
+	$(PY) -m pip install -e ".[dev,app,pdf,ml]"
 
 test:             ## unit + contract tests (no network, no GPU)
 	$(PY) -m pytest -m "not network and not gpu"

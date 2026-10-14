@@ -58,7 +58,7 @@ def main(argv=None) -> int:
     ap.add_argument("--mode", default="fast", choices=["fast", "full", "cached"])
     ap.add_argument("--stages", default="s1,terrain,s2")
     ap.add_argument("--allow-cross-track", action="store_true", help="experiment E5 only")
-    ap.add_argument("--model", default="b0", help="checkpoint path or b0 (only for the model stage)")
+    ap.add_argument("--model", default=None, help="checkpoint path (default: configured model-v1), or explicit b0")
     ap.add_argument("--config", default=str(ROOT / "configs" / "default.yaml"))
     ap.add_argument("--out", default=None, help="run folder (default <cache_dir>/<name>)")
     a = ap.parse_args(argv)
@@ -73,7 +73,7 @@ def main(argv=None) -> int:
     grid.to_json(run / "grid.json")
     ctx = RunContext(run_dir=run, run_id=a.name, aoi_bbox=bbox, event_datetime=parse_event(a.event),
                      osm_snapshot=cfg.get("osm", {}).get("snapshot", DEFAULT_OSM_SNAPSHOT), mode=a.mode,
-                     cfg=cfg, grid=grid, model_path=a.model)
+                     cfg=cfg, grid=grid, model_path=a.model or cfg.get("model", {}).get("checkpoint", "models/cutoff_unet_v1.pt"))
     returns, status = {}, 0
     for name in a.stages.split(","):
         mod, fn, keys = STAGES[name]

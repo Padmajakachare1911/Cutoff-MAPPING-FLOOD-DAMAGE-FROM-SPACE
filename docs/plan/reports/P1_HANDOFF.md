@@ -4,8 +4,8 @@ This file is kept current after every P1 change, so another agent or teammate ca
 list is in `docs/plan/01_P1_data_sar.md`; per-task details are in `P1.0.md` … `P1.8.md`; every change after the first
 merge is in `P1_UPDATES_LOG.md`.
 
-**Status (2026-10-13, evening): P1 is complete except the team-Drive upload.** All P1 code is merged on `main` (PRs #13–#21);
-three follow-up branches wait for review (below). Real Sentinel-1/-2 data now runs end-to-end: the logins work, SNAP
+**Status (2026-10-14): P1 implementation and team-Drive cache upload are complete.** All P1 code is merged on `main` (PRs #13–#21);
+the three follow-up branches are merged (the status board below is a historical snapshot). Real Sentinel-1/-2 data now runs end-to-end: the logins work, SNAP
 14.0.0 is verified, all three demo AOIs are cached, and E5 and E3c are measured. Full task-by-task status:
 `P1_CHECKLIST.md`.
 

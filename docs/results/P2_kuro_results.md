@@ -53,11 +53,11 @@ All numbers are measured, from `eval/kuro_eval.py`. Flood-class metrics are pixe
 
 Every model degrades on slopes. The ≥ 15° stratum has only 8,742 test pixels, too few to rank models. **Kuro Siwo cannot measure Himalayan-gorge performance.** That is evaluated on Trishuli vs EMSR927 (E4, check-only, after the freeze), and is why gating downgrades steep detections to "possible" instead of trusting them.
 
-## E3: ablations (test IoU)
+## E3: ablations (test IoU; validation = best-epoch validation flood IoU from the checkpoint meta, `docs/experiment_log.md`)
 
 | Question | Comparison | Result | Conclusion |
 |---|---|---|---|
-| H1: does same-track before/after help? | post-only 0.559 vs pre+post+change 0.689 | **+0.130** (threshold +0.02) | **Confirmed.** Without the pre-event image, precision drops 0.81 → 0.65: always-dark surfaces get confused with new water. |
+| H1: does same-track before/after help? | post-only 0.559 vs pre+post+change 0.689 (validation 0.533 vs 0.638) | **+0.130** test, **+0.105** validation (threshold +0.02) | **Confirmed.** Without the pre-event image, precision drops 0.81 → 0.65: always-dark surfaces get confused with new water. |
 | D6: does the slope channel help? | with slope 0.696 vs without 0.689 (validation 0.641 vs 0.638) | +0.007 test, +0.003 validation | **No measurable benefit.** Rejected: see the decision record. |
 | Data size | 60 % → 100 % (no-slope) | 0.646 → 0.689 | More events help (+0.04). |
 
@@ -67,6 +67,16 @@ Every model degrades on slopes. The ≥ 15° stratum has only 8,742 test pixels,
 |---|---|---|---|---|
 | b3_no_slope (final) | 1.037 | 0.002 | 0.139 | **0.130** |
 | p7 | 1.013 | 0.002 | 0.105 | 0.103 |
+
+**Flood ECE by slope stratum** (validation events, fitted T; sampled pixels in brackets; `eval/kuro_eval.py --split val --calibration`, raw `docs/results/raw/val_e8_slope.{json,md}`):
+
+| Slope | b3_no_slope (final) | p7 |
+|---|---|---|
+| 0–5° | 0.130 (641,561) | 0.103 (734,831) |
+| 5–15° | 0.158 (14,450) | 0.091 (22,566) |
+| ≥ 15° | 0.119 (710) | 0.080 (796) |
+
+The final model's score is about as miscalibrated on 5–15° slopes as on flat ground (slightly worse); the ≥ 15° stratum has too few validation pixels (~700) to read. This rerun reproduces the pooled values above exactly.
 
 All-class ECE is near zero because most pixels are easy "no water". **Flood-class ECE ≈ 0.13**: a flood score of 0.8 is not a calibrated 80 % probability. Temperature scaling barely changes it (T ≈ 1). Consequence: `p_flood` is shown as a "model score", and decisions use τ (chosen on validation) and gating tiers. This is a stated limitation.
 

@@ -40,7 +40,50 @@ def fake_stages(tmp_path, monkeypatch):
 
 def execute(fake_stages, **kwargs):
     _, tmp = fake_stages
+    kwargs.setdefault('model', 'b0')  # synthetic tests explicitly request the baseline
     return pipeline.run(MOCK_BBOX, '2026-08-26T02:52:00Z', out_root=tmp / 'runs', **kwargs)
+
+
+def configured_checkpoint(fake_stages, monkeypatch):
+    import yaml
+    registry, tmp = fake_stages
+    checkpoint = tmp / 'cutoff_unet_v1.pt'
+    checkpoint.write_bytes(b'synthetic checkpoint selection fixture')
+    cfg = pipeline.load_config()
+    cfg['model']['checkpoint'] = str(checkpoint)
+    config = tmp / 'config.yaml'
+    config.write_text(yaml.safe_dump(cfg), encoding='utf-8')
+    selected = []
+    original = registry['model']
+    def model_stage(ctx):
+        selected.append(ctx.model_path)
+        return original(ctx)
+    registry['model'] = model_stage
+    return checkpoint, config, selected
+
+
+def test_pipeline_default_uses_configured_v1(fake_stages, monkeypatch):
+    checkpoint, config, selected = configured_checkpoint(fake_stages, monkeypatch)
+    _, tmp = fake_stages
+    pipeline.run(MOCK_BBOX, '2026-08-26T02:52:00Z', config=config, out_root=tmp / 'runs')
+    assert selected == [str(checkpoint)]
+
+
+def test_cli_default_uses_configured_v1(fake_stages, monkeypatch):
+    from cutoff.cli import main
+    checkpoint, config, selected = configured_checkpoint(fake_stages, monkeypatch)
+    _, tmp = fake_stages
+    assert main(['run', '--bbox', ','.join(map(str, MOCK_BBOX)), '--event', '2026-08-26T02:52:00Z',
+                 '--config', str(config), '--out', str(tmp / 'runs')]) == 0
+    assert selected == [str(checkpoint)]
+
+
+def test_default_missing_v1_does_not_silently_use_b0(fake_stages, monkeypatch):
+    _, tmp = fake_stages
+    monkeypatch.chdir(tmp)
+    with pytest.raises(FileNotFoundError, match='model-v1'):
+        pipeline.run(MOCK_BBOX, '2026-08-26T02:52:00Z', out_root=tmp / 'runs')
+    assert not (tmp / 'runs').exists()
 
 
 def test_complete_run_and_timings(fake_stages):
@@ -90,7 +133,7 @@ def test_hard_failure_has_only_error(fake_stages):
 
 def test_date_warning_and_utc(fake_stages):
     _, tmp = fake_stages
-    root = pipeline.run(MOCK_BBOX, '2026-08-26', out_root=tmp / 'runs')
+    root = pipeline.run(MOCK_BBOX, '2026-08-26', model='b0', out_root=tmp / 'runs')
     data = json.loads((root / 'results.json').read_text())
     assert data['inputs']['event_datetime'] == '2026-08-26T23:59:59Z'
     assert any('same-day' in w for w in data['warnings'])

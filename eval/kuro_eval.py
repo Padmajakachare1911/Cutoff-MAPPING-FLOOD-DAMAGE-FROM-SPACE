@@ -26,6 +26,8 @@ from cutoff.contracts import IGNORE_INDEX  # noqa: E402
 from cutoff.data.kuro_siwo import KuroSiwoDataset  # noqa: E402
 from cutoff.ml.metrics import ConfusionMeter, StratifiedMeter, expected_calibration_error  # noqa: E402
 
+SLOPE_LABELS = ((0, "0-5 deg"), (1, "5-15 deg"), (2, ">=15 deg"))  # cutoff.ml.metrics.slope_bin codes
+
 
 def _iter_b0(ds):
     from cutoff.ml.baselines import b0_proba
@@ -96,20 +98,26 @@ def calibration(ds, ckpt: str, device: str = "cpu") -> dict:
     """E8 on validation events, at T = 1 and at the checkpoint's fitted T:
     - all-class ECE of the predicted class (dominated by easy 'no water' pixels, so near 0);
     - flood ECE: is p(flood) = 0.8 really flood 80 % of the time? (the meaningful one for responders),
-      computed over pixels where the model gives p(flood) >= 0.05 or that are flood."""
+      computed over pixels where the model gives p(flood) >= 0.05 or that are flood.
+    Also flood ECE per slope stratum at the fitted T ("ece_by_slope"; None where a stratum has no pixels)."""
+    from cutoff.ml.metrics import slope_bin
     from cutoff.ml.model import load_checkpoint
     T = load_checkpoint(ckpt)[1]["temperature"]
     out = {"T": T}
     for label, t in (("T=1", 1.0), ("fitted T", T)):
-        conf, corr, pf, isf = [], [], [], []
-        for _, p, y, _ in _iter_ckpt(ds, ckpt, device, T_override=t):
+        conf, corr, pf, isf, sb = [], [], [], [], []
+        for _, p, y, slope in _iter_ckpt(ds, ckpt, device, T_override=t):
             v = y != IGNORE_INDEX
             conf.append(p.max(0)[v][::16]); corr.append((p.argmax(0) == y)[v][::16])
             rel = v & ((p[2] >= 0.05) | (y == 2))
-            pf.append(p[2][rel][::4]); isf.append((y == 2)[rel][::4])
+            pf.append(p[2][rel][::4]); isf.append((y == 2)[rel][::4]); sb.append(slope_bin(slope)[rel][::4])
+        pf, isf, sb = np.concatenate(pf), np.concatenate(isf), np.concatenate(sb)
         out[f"all-class ECE, {label}"] = expected_calibration_error(np.concatenate(conf), np.concatenate(corr))
-        out[f"flood ECE, {label}"] = expected_calibration_error(np.concatenate(pf), np.concatenate(isf))
-    return {"name": Path(ckpt).stem, "ece": out}
+        out[f"flood ECE, {label}"] = expected_calibration_error(pf, isf)
+    by_slope = [{"slope_bin": lab, "n_px": int(np.sum(sb == b)),
+                 "flood_ece": expected_calibration_error(pf[sb == b], isf[sb == b]) if np.any(sb == b) else None}
+                for b, lab in SLOPE_LABELS]                  # sb/pf/isf are from the fitted-T pass
+    return {"name": Path(ckpt).stem, "ece": out, "ece_by_slope": by_slope, "n_flood_ece_px": int(pf.size)}
 
 
 def _fmt(v):
@@ -134,7 +142,7 @@ def to_markdown(results: list[dict], calib: list[dict] | None = None) -> str:
         lines.append(f"| {ev} | " + " | ".join(cells) + " |")
     lines += ["", "## E2 - by slope stratum (all events pooled; IoU, support px)", "",
               "| slope bin | " + " | ".join(r["name"] for r in results) + " |", "|---|" + "---|" * len(results)]
-    for b, lab in ((0, "0-5 deg"), (1, "5-15 deg"), (2, ">=15 deg")):
+    for b, lab in SLOPE_LABELS:
         cells = []
         for r in results:
             s = next((x for x in r["strata"] if x["event"] == "ALL" and x["slope_bin"] == b), None)
@@ -146,6 +154,14 @@ def to_markdown(results: list[dict], calib: list[dict] | None = None) -> str:
                   "| model | " + " | ".join(cols) + " |", "|---|" + "---|" * len(cols)]
         for c in calib:
             lines.append(f"| {c['name']} | " + " | ".join(_fmt(v) for v in c["ece"].values()) + " |")
+        lines += ["", "## E8 - flood ECE by slope stratum (validation events, fitted T; flood ECE, sampled px)", "",
+                  "| slope bin | " + " | ".join(c["name"] for c in calib) + " |", "|---|" + "---|" * len(calib)]
+        for _, lab in SLOPE_LABELS:
+            cells = []
+            for c in calib:
+                r = next(x for x in c["ece_by_slope"] if x["slope_bin"] == lab)
+                cells.append(f"{_fmt(r['flood_ece'])} ({r['n_px']})")
+            lines.append(f"| {lab} | " + " | ".join(cells) + " |")
     return "\n".join(lines) + "\n"
 
 

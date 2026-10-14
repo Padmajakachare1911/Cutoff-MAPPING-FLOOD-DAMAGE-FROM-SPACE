@@ -72,7 +72,7 @@ LIMITATIONS = [
     "The model score is calibrated on global, mostly lowland floods, not on the Himalaya.",
     "Access results depend on OpenStreetMap completeness; 'unknown' means unmapped, not safe.",
     "Educational prototype, not an operational tool.",
-    "Permanent-water scores may include steep radar back-slopes; this class is excluded from hazard exposure.",
+    "Permanent-water scores are gated by terrain and clear optical evidence; this class is excluded from hazard exposure.",
 ]
 
 DEPENDENCIES = {
@@ -171,7 +171,7 @@ def _write_results(ctx):
 
 
 def run(bbox: tuple[float, float, float, float], event_datetime: str | datetime, mode: str = "cached",
-        model: str = "b0", osm_snapshot: str | None = None, out_root: str | Path = "outputs",
+        model: str | None = None, osm_snapshot: str | None = None, out_root: str | Path = "outputs",
         run_id: str | None = None, stages: list[str] | None = None, *, config: str | Path | None = None,
         cache_dir: str | Path | None = None, flowpath: tuple[float, float] | None = None) -> Path:
     """Run fresh stages in contract order; never overwrite a previous run.
@@ -188,6 +188,7 @@ def run(bbox: tuple[float, float, float, float], event_datetime: str | datetime,
     if not (-180 <= w < east <= 180 and -80 <= south < north <= 84):
         raise ValueError("bbox must be ordered W,S,E,N inside the UTM latitude range (-80..84)")
     cfg = copy.deepcopy(load_config(config))
+    model = model or cfg.get("model", {}).get("checkpoint", "models/cutoff_unet_v1.pt")
     snapshot, _ = parse_event(osm_snapshot or cfg.get("osm", {}).get("snapshot", DEFAULT_OSM_SNAPSHOT))
     if snapshot >= event:
         raise ValueError("OSM snapshot must be strictly before the event")

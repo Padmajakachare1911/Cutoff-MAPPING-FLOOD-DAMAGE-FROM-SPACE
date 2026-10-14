@@ -59,7 +59,7 @@ gating:                             # FROZEN
 
 osm:
   snapshot: "2026-07-27T00:00:00Z"  # PS: latest pre-event snapshot; asserted < event datetime
-  api_v2: https://api.heigit.org/ohsome-api/v2-rc      # needs OHSOME_API_KEY (header Authorization)
+  api_v2: https://api.heigit.org/ohsome-api/v2         # needs OHSOME_API_KEY (header Authorization)
   api_v1: https://api.ohsome.org/v1                    # fallback; shut down 2026-11-30
   tile_deg: 0.1
   request_delay_s: 0.5                # pace tiled v2 extraction requests to avoid HTTP 429
