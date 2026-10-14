@@ -214,10 +214,21 @@ def _access_aoi(ctx: RunContext):
     return aoi.to_crs(ctx.grid.crs).buffer(metres).to_crs(4326).iloc[0]
 
 
+def _snapshot_slug(snapshot_iso: str) -> str:
+    """Derive a filesystem-safe slug from the OSM snapshot ISO timestamp.
+
+    The slug is included in the cache directory so that cached parquet files
+    from one snapshot date can never silently bleed into a run that uses a
+    different snapshot date (fixes #25).
+    """
+    # Replace characters that are unsafe on Windows/Linux (':') and keep it short.
+    return snapshot_iso.strip().replace(":", "").replace("+", "").replace(" ", "T")[:17]
+
+
 def _cache_dir(ctx: RunContext) -> Path:
     from cutoff.data.s1_acquire import cache_root, grid_hash
 
-    return cache_root(ctx) / "osm" / grid_hash(ctx.grid)
+    return cache_root(ctx) / "osm" / grid_hash(ctx.grid) / _snapshot_slug(ctx.osm_snapshot)
 
 
 def stage_osm(ctx: RunContext) -> dict:
@@ -250,11 +261,31 @@ def stage_osm(ctx: RunContext) -> dict:
             frame = frame.drop_duplicates("osm_id").reset_index(drop=True)
             frame.to_parquet(cache_path)
         except Exception as exc:
-            if not cache_path.exists():
-                raise
-            ctx.warn(STAGE, f"ohsome unavailable for {layer}; using cached pre-event OSM: {exc}")
-            frame = gpd.read_parquet(cache_path)
-            apis.add("cache")
+            if cache_path.exists():
+                # Same-snapshot cache is available — use it.
+                ctx.warn(STAGE, f"ohsome unavailable for {layer}; using cached pre-event OSM: {exc}")
+                frame = gpd.read_parquet(cache_path)
+                apis.add("cache")
+            else:
+                # No same-snapshot cache. Search for any parquet for this layer
+                # under the same grid hash (any snapshot date) as a last resort
+                # so that a live integration run is not blocked solely by API
+                # access issues (fixes #31).
+                from cutoff.data.s1_acquire import cache_root, grid_hash
+
+                grid_cache = cache_root(ctx) / "osm" / grid_hash(ctx.grid)
+                candidates = sorted(grid_cache.glob(f"*/{layer}.parquet"))
+                if not candidates:
+                    raise
+                fallback = candidates[-1]  # newest snapshot slug (lexicographic)
+                ctx.warn(
+                    STAGE,
+                    f"ohsome unavailable for {layer} and no same-snapshot cache exists; "
+                    f"falling back to stale cache {fallback} — snapshot date MAY NOT MATCH "
+                    f"'{ctx.osm_snapshot}'. Re-run with a valid OHSOME_API_KEY to refresh: {exc}",
+                )
+                frame = gpd.read_parquet(fallback)
+                apis.add("cache")
         frame = frame.to_crs(ctx.grid.crs)
         frame.to_file(ctx.path(f"osm_{layer}"), driver="GPKG")
         counts[layer] = len(frame)
