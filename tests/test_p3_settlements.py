@@ -27,6 +27,23 @@ def test_six_buildings_make_cluster_but_four_do_not():
     assert len(derive_settlements(empty_places, _buildings(4), aoi)) == 0
 
 
+def test_cluster_anchor_is_inside_a_member_building_not_between_buildings():
+    empty = gpd.GeoDataFrame({"place": [], "name": []}, geometry=[], crs=CRS)
+    buildings = gpd.GeoDataFrame(geometry=[box(x-2,y-2,x+2,y+2) for x,y in
+        [(-30,-30),(-30,0),(-30,30),(0,30),(30,30),(30,0),(30,-30)]], crs=CRS)
+    mean = buildings.geometry.centroid.union_all().centroid
+    assert not buildings.geometry.union_all().covers(mean)
+    settlement = derive_settlements(empty, buildings, box(-100,-100,100,100)).iloc[0]
+    assert buildings.geometry.union_all().covers(settlement.geometry)
+    assert settlement.n_buildings == 7
+
+
+def test_named_osm_location_is_preserved_exactly():
+    point = Point(3, 19)
+    places = gpd.GeoDataFrame({"place": ["village"], "name": ["Named"]}, geometry=[point], crs=CRS)
+    assert derive_settlements(places, _buildings(6), box(-100,-100,100,100)).iloc[0].geometry.equals_exact(point, 0)
+
+
 def test_nearby_place_suppresses_building_cluster_and_counts_buildings():
     places = gpd.GeoDataFrame(
         {"osm_id": ["node/1"], "place": ["village"], "name": ["Named"]},

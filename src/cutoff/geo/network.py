@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import math
+from collections import defaultdict
 
 import geopandas as gpd
 import networkx as nx
@@ -83,16 +84,33 @@ def node_ways(roads: gpd.GeoDataFrame, max_seg_m: float = 100.0) -> gpd.GeoDataF
 
 
 def build_graph(segments: gpd.GeoDataFrame, tiers=("road", "track")) -> nx.MultiGraph:
-    """Build an undirected keyed multigraph from segment endpoints rounded to one metre."""
+    """Build a keyed multigraph, preserving grade separation at densified endpoints."""
     if segments.crs is None or not segments.crs.is_projected:
         raise ValueError("segments must use a projected metre CRS")
     graph = nx.MultiGraph()
     allowed = set(tiers)
-    for _, row in segments.iterrows():
-        if row.get("tier", "road") not in allowed:
-            continue
-        start = tuple(round(value) for value in row.geometry.coords[0])
-        end = tuple(round(value) for value in row.geometry.coords[-1])
+    rows = [row for _, row in segments.iterrows() if row.get("tier", "road") in allowed]
+    endpoints = defaultdict(list)
+    for row in rows:
+        original = {tuple(round(v) for v in row.get(name, row.geometry.coords[index]))
+                    for name, index in (("way_start", 0), ("way_end", -1))}
+        for side, coord in enumerate((row.geometry.coords[0], row.geometry.coords[-1])):
+            point = tuple(round(value) for value in coord)
+            endpoints[point].append((row, side, point in original))
+    node_keys = {}
+    for point, entries in endpoints.items():
+        groups = nx.utils.UnionFind(range(len(entries)))
+        for i, (row, _, original) in enumerate(entries):
+            for j in range(i):
+                other, _, other_original = entries[j]
+                same_way = row.get("parent_idx", row.seg_id) == other.get("parent_idx", other.seg_id)
+                if same_way or _same_grade(row, other) or (original and other_original):
+                    groups.union(i, j)
+        separated = len({groups[i] for i in range(len(entries))}) > 1
+        for i, (row, side, _) in enumerate(entries):
+            node_keys[(int(row.seg_id), side)] = (*point, groups[i]) if separated else point
+    for row in rows:
+        start, end = (node_keys[(int(row.seg_id), side)] for side in (0, 1))
         if start == end:
             continue
         length = float(row.geometry.length)
@@ -120,7 +138,7 @@ def closed_segments(segments: gpd.GeoDataFrame, hazard: gpd.GeoDataFrame, scenar
         return set()
     closed: set[int] = set()
     bridge_groups = segments.loc[segments["bridge"].astype(bool)].groupby("parent_idx")
-    bridge_classes = all_hazard if scenario == "A" else high
+    bridge_classes = high  # D8: only high-confidence evidence at approaches closes a bridge.
     approach_m = float(access.get("bridge_approach_m", 25))
     if bridge_classes is not None:
         for _, group in bridge_groups:
@@ -140,15 +158,16 @@ def closed_segments(segments: gpd.GeoDataFrame, hazard: gpd.GeoDataFrame, scenar
 
 
 def _snap_points(graph: nx.MultiGraph, points: gpd.GeoDataFrame, max_m: float) -> dict:
-    nodes = np.asarray(list(graph.nodes), dtype=float)
+    nodes = list(graph.nodes)
+    coordinates = np.asarray([node[:2] for node in nodes], dtype=float)
     result = {}
     for idx, point in points.geometry.items():
         if not len(nodes):
             result[idx] = None
             continue
-        distances = np.hypot(nodes[:, 0] - point.x, nodes[:, 1] - point.y)
+        distances = np.hypot(coordinates[:, 0] - point.x, coordinates[:, 1] - point.y)
         nearest = int(distances.argmin())
-        result[idx] = tuple(nodes[nearest]) if distances[nearest] <= max_m else None
+        result[idx] = nodes[nearest] if distances[nearest] <= max_m else None
     return result
 
 

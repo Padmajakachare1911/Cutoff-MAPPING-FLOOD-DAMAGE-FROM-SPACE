@@ -99,7 +99,7 @@ def stage_access(ctx) -> dict
   - **A**: segment within 15 m of any class 1–4 polygon → closed.
   - **B**: ≥ 50 m of the segment inside high-confidence classes (1, 4) → closed.
   - **C** (bridges only): a bridge segment is closed only if a high-confidence polygon intersects a 25 m buffer around **either end of the bridge way** (its approaches), not the mid-span (D8). Permanent water (5) never closes anything.
-  - In A and B, bridges also follow the D8 approach rule rather than the plain intersection.
+  - In A and B, bridges also follow D8: **high-confidence classes (1, 4)** must reach an approach; classes 2/3 and plain mid-span intersections do not close a bridge.
 - [ ] **Status:**
   1. Snap each settlement and target to the nearest graph node within `snap_max_m` (500 m); unsnapped → `unknown`.
   2. Run multi-source Dijkstra from all targets on G (baseline `t0`) and on G minus the closed keys (`t1`).

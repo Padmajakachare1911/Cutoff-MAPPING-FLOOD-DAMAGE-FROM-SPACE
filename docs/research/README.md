@@ -11,3 +11,20 @@
 | `06_literature_review_elicit.md` | literature synthesis (abstract-level) | background, citations |
 
 The conversion is lossy (tables and maths may be garbled); the original PDFs are kept by the team. When the plan and a research document disagree, **the plan wins** — see `docs/plan/00_MASTER_PLAN.md` §1 and `docs/plan/06_verification_log.md`.
+
+## Original PDFs
+
+The original source files are now included at the repository root alongside these
+converted texts. They are supporting research, not inference inputs or new
+evaluation measurements.
+
+| Original | Converted reference |
+|---|---|
+| [Track B.pdf](../../Track%20B.pdf) | `00_problem_statement_track_b.md` |
+| [Space Track.pdf](../../Space%20Track.pdf) | `00b_problem_statement_designed_brief.md` |
+| [Research implementation blueprint](../../Cutoff_Research_Implementation_Blueprint.pdf) | `01_blueprint_v1.0.md` |
+| [Track B project blueprint](../../Cutoff%20%E2%80%94%20Track%20B%20project%20blueprint%20%28Himalayan%20flood%2C%20debris%20%26%20access%20mapping%29.pdf) | `02_blueprint_v0_10oct.md` |
+| [Proposal audit](../../Cutoff%20Hackathon%20Proposal%20Audit.pdf) | `03_proposal_audit.md` |
+| [Himalayan assessment](../../Himalayan%20Flood%20Mapping%20AI%20Assessment%20-%20Google%20Docs.pdf) | `04_himalayan_assessment.md` |
+| [Repository investigation](../../Flood_Repo_Investigation_Report.pdf) | `05_repo_investigation.md` |
+| [Literature review](../../Elicit%20-%20Flood%2C%20debris%2C%20infrastructure%20damage%20and%20accessibility%20literature%20review.pdf) | `06_literature_review_elicit.md` |

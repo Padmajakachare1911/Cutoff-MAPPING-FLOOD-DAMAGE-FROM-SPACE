@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cutoff · 3D terrain</title><link rel="stylesheet" href="/static/vendor/maplibre-gl.css"><link rel="stylesheet" href="/static/map.css"></head>
+<body class="terrain-view">
+  <header class="story-toolbar"><div class="map-actions terrain-actions">
+    <label>Surface <select id="terrain-background" aria-label="Terrain background"><option value="terrain_relief">Elevation relief</option><option value="before_rgb">Before · Sentinel-2 colour</option><option value="after_rgb">After · Sentinel-2 colour</option><option value="pre">Original · before radar</option><option value="post">Original · after radar</option></select></label>
+    <label>Height <select id="terrain-scale" aria-label="Terrain height scale"><option value="1">1× · true scale</option><option value="1.5">1.5× · enhanced relief</option><option value="2">2× · enhanced relief</option></select></label>
+    <button data-layer="hazard" class="active" aria-pressed="true">Flood &amp; river water</button>
+    <button data-layer="changes" aria-pressed="false">Radar changes</button>
+    <button data-layer="contours" aria-pressed="false">Elevation contours</button>
+    <button data-layer="flow" class="active" aria-pressed="true">Downstream trace</button>
+    <button data-layer="access" class="active" aria-pressed="true">Inferred closures</button>
+    <button data-layer="assets" class="active" aria-pressed="true">Settlements &amp; assets</button>
+    <button data-layer="no_observation" class="active" aria-pressed="true">No observation</button>
+    <button data-layer="score" aria-pressed="false">Model flood score</button>
+    <button data-layer="s2" aria-pressed="false">Optical water</button>
+    <button id="top-view">Inspect from above</button>
+    <button id="reset-view"><i data-lucide="locate-fixed"></i>Reset terrain</button>
+  </div></header>
+  <div class="scene-metadata"><div class="scene-label"><strong>3D TERRAIN · MEASURED ELEVATION</strong><span id="background-note">Elevation colours show landform; they are not a satellite photograph.</span></div></div>
+  <main class="map-scene"><div id="map"></div><div id="map-state" role="status">Loading terrain &amp; evidence…</div></main>
+  <div class="legend"><span><i style="--c:#327ea8" class="line"></i>Mapped river · pre-event OSM location</span><span>Waterways provide geographic context; their mapped shape is not the observed flood extent.</span></div>
+  <div class="legend" aria-label="Terrain legend"><span><i style="--c:#0879bd"></i>Flood · high</span><span><i style="--c:#80c8e7"></i>Flood · possible</span><span><i style="--c:#cf930c"></i>Radar decrease · water or mud</span><span><i style="--c:#b23b27"></i>Radar increase · roughness</span><span><i style="--c:#154a82"></i>Persistent water</span><span><i style="--c:#b56f1e" class="line"></i>Downhill DEM trace · not simulated flood flow</span><span><i style="--c:#cb3537" class="line"></i>Inferred closure</span><span><i style="--c:#727d85" class="hatch"></i>No observation</span></div>
+  <div class="legend"><span><i style="--c:#17775f" class="dot"></i>Connected</span><span><i style="--c:#d89513" class="dot"></i>Degraded route</span><span><i style="--c:#c93131" class="dot"></i>Cut-off route · not proof of flooding</span><span><i style="--c:#788492" class="dot"></i>Unknown connection</span></div>
+  <div class="scene-metadata" id="score-note" hidden><div class="scene-label"><strong>AI FLOOD PROBABILITY · 0–1</strong><span>Blue intensity is the saved U-Net flood probability before terrain/optical gating. It replaces the classified flood overlay while selected. Global calibration does not establish local accuracy.</span></div></div>
+  <footer class="interpretation"><div><strong>Terrain, satellite evidence and access describe different things</strong><p>Right-drag or Ctrl-drag to rotate and tilt. Click a marker to inspect its location source, road snap and flood classification. Red points show route loss under the selected closure scenario; red road lines follow mapped road centres. Original radar and AI model outputs remain selectable above.</p><p id="registration-note"></p><span id="source-note"></span></div></footer>
+  <script src="/static/map-layout.js"></script><script src="/static/vendor/maplibre-gl.js"></script><script src="/static/vendor/lucide.min.js"></script><script src="/static/terrain-map.js"></script>
+</body></html>

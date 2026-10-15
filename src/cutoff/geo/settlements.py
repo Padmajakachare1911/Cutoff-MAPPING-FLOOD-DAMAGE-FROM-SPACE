@@ -50,6 +50,15 @@ def derive_settlements(places: gpd.GeoDataFrame, buildings: gpd.GeoDataFrame, ao
                 if distances.loc[nearest] <= 2000:
                     near_name = places.loc[nearest].get("name") or ""
                     suffix = f" near {near_name}" if near_name else ""
+            # A cluster mean can fall in a river or an empty courtyard. Keep
+            # clustering/suppression based on the mean, but anchor its marker
+            # inside a real member footprint. This is a representative location,
+            # not a surveyed settlement boundary or a claim of inundation.
+            anchors = buildings.loc[members.index].geometry.representative_point()
+            anchors = anchors[anchors.within(aoi) | anchors.touches(aoi)]
+            if anchors.empty:
+                continue
+            point = anchors.loc[anchors.distance(point).idxmin()]
             rows.append({"geometry": point, "name": f"Unnamed settlement ({len(members)} bldgs){suffix}",
                          "source": "building_cluster", "n_buildings": len(members)})
 

@@ -34,17 +34,45 @@ def raster_overlay(path, kind, band=1, max_size=1400):
         width, height = max(1, round(width * scale)), max(1, round(height * scale))
         bounds = transform_bounds(source.crs, 'EPSG:3857', *source.bounds)
         trans = from_bounds(*bounds, width, height)
+        if kind == 'rgb':
+            rgb = np.full((3, height, width), np.nan, dtype='float32')
+            for channel in range(3):
+                reproject(rasterio.band(source, channel+1), rgb[channel], src_transform=source.transform,
+                          src_crs=source.crs, src_nodata=source.nodata, dst_transform=trans,
+                          dst_crs='EPSG:3857', dst_nodata=np.nan, resampling=Resampling.bilinear)
+            mask = np.zeros((height, width), dtype='float32')
+            transport = source.count == 4 and source.dtypes[0] == 'uint8'
+            reproject(rasterio.band(source, 4 if transport else 6), mask, src_transform=source.transform, src_crs=source.crs,
+                      src_nodata=source.nodata, dst_transform=trans, dst_crs='EPSG:3857',
+                      dst_nodata=np.nan, resampling=Resampling.nearest)
+            rgba = np.zeros((height, width, 4), dtype=np.uint8)
+            values = np.clip(np.nan_to_num(rgb)/255, 0, 1) if transport else np.power(np.clip(np.nan_to_num(rgb)/.30, 0, 1), 1/1.8)
+            rgba[..., :3] = np.moveaxis((values*255).astype('uint8'), 0, -1)
+            rgba[(mask >= .5) & np.all(np.isfinite(rgb), axis=0), 3] = 255
+            west, south, east, north = transform_bounds('EPSG:3857', 'EPSG:4326', *bounds)
+            return rgba, [[south, west], [north, east]]
         data = np.full((height, width), np.nan, dtype='float32')
-        categorical = kind in {'hazard', 'no_obs', 's2'}
-        reproject(rasterio.band(source, band), data, src_transform=source.transform, src_crs=source.crs,
-                  src_nodata=source.nodata, dst_transform=trans, dst_crs='EPSG:3857', dst_nodata=np.nan,
+        categorical = kind in {'hazard', 'flood', 'changes', 'permanent', 'no_obs', 's2', 'water', 'cloud'}
+        # Class 254 is meaningful evidence to display, even though the analysis
+        # GeoTIFF also records it as its nodata value.
+        values = source.read(band) if kind == 'no_obs' else rasterio.band(source, band)
+        reproject(values, data, src_transform=source.transform, src_crs=source.crs,
+                  src_nodata=None if kind == 'no_obs' else source.nodata, dst_transform=trans, dst_crs='EPSG:3857', dst_nodata=np.nan,
                   resampling=Resampling.nearest if categorical else Resampling.bilinear)
     rgba = np.zeros((*data.shape, 4), dtype=np.uint8)
     valid = np.isfinite(data)
-    if kind == 'hazard':
+    if kind in {'hazard', 'flood', 'changes', 'permanent'}:
         for code, color in COLORS.items():
             if code in (0, 254):
                 continue
+            if kind == 'flood' and code not in (1, 2):
+                continue
+            if kind == 'changes' and code not in (3, 4):
+                continue
+            if kind == 'permanent' and code != 5:
+                continue
+            if code == 5:
+                color = '#154a82'
             selected = data == code
             rgba[selected, :3] = tuple(int(color[i:i+2], 16) for i in (1, 3, 5))
             rgba[selected, 3] = 170
@@ -52,14 +80,18 @@ def raster_overlay(path, kind, band=1, max_size=1400):
         rows, cols = np.indices(data.shape)
         selected = (data == 254) & ((rows + cols) % 9 < 3)
         rgba[selected] = (65, 72, 80, 220)
+    elif kind == 'cloud':
+        rows, cols = np.indices(data.shape)
+        selected = np.isin(data, [0, 1, 3, 8, 9, 10, 11]) & ((rows + cols) % 12 < 3)
+        rgba[selected] = (239, 245, 250, 200)
+    elif kind == 'water':
+        rgba[data == 1] = (21, 74, 130, 230)
     elif kind == 's2':
         rgba[data == 1] = (37, 181, 179, 180)
     elif kind == 'score':
         clipped = np.clip(np.nan_to_num(data), 0, 1)
-        rgba[..., 0] = (clipped * 255).astype(np.uint8)
-        rgba[..., 1] = ((1-clipped) * 130).astype(np.uint8)
-        rgba[..., 2] = ((1-clipped) * 200).astype(np.uint8)
-        rgba[valid, 3] = 170
+        rgba[..., :3] = (18, 115, 214)
+        rgba[valid, 3] = (clipped[valid] * 230).astype(np.uint8)
     else:
         with np.errstate(divide='ignore', invalid='ignore'):
             db = np.clip(10*np.log10(np.where(data > 0, data, np.nan)), -30, 5)
@@ -70,7 +102,7 @@ def raster_overlay(path, kind, band=1, max_size=1400):
     return rgba, [[south, west], [north, east]]
 
 
-def vector_data(path):
+def vector_data(path, *, escape_strings=True):
     frame = gpd.read_file(path).to_crs(4326)
     for column in frame.columns:
         if column == 'geometry':
@@ -79,7 +111,7 @@ def vector_data(path):
             frame[column] = frame[column].map(lambda v: 'unreachable' if isinstance(v, (float, int)) and math.isinf(v)
                                             else 'unknown' if v is None or (isinstance(v, float) and math.isnan(v))
                                             else str(v))
-        elif frame[column].dtype == object:
+        elif escape_strings and frame[column].dtype == object:
             frame[column] = frame[column].map(lambda v: html.escape(str(v)) if v is not None else '')
     data = frame.__geo_interface__
     data['attribution'] = ODBL_NOTICE

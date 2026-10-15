@@ -11,17 +11,23 @@ from rasterio.warp import Resampling, reproject
 
 
 @lru_cache(maxsize=256)
-def terrain_png(path: Path, z: int, x: int, y: int) -> bytes:
+def terrain_png(path: Path, z: int, x: int, y: int, size: int = 256, strict: bool = False) -> bytes:
     if not 0 <= z <= 18 or not (0 <= x < 2**z and 0 <= y < 2**z):
         raise ValueError("Invalid terrain tile coordinates")
+    if size not in (256, 512):
+        raise ValueError("Terrain tile size must be 256 or 512")
     half = 20037508.342789244
     span = 2 * half / 2**z
     west, north = -half + x * span, half - y * span
-    tile = np.full((256, 256), np.nan, np.float32)
+    tile = np.full((size, size), np.nan, np.float32)
     with rasterio.open(path) as source:
         reproject(rasterio.band(source, 1), tile, src_transform=source.transform, src_crs=source.crs,
-                  src_nodata=source.nodata, dst_transform=from_bounds(west, north-span, west+span, north, 256, 256),
+                  src_nodata=source.nodata, dst_transform=from_bounds(west, north-span, west+span, north, size, size),
                   dst_crs="EPSG:3857", dst_nodata=np.nan, resampling=Resampling.bilinear)
+    if strict and not np.isfinite(tile).all():
+        # Returning zero here would manufacture a cliff at the coverage edge.
+        # Prepared viewers stay inside coverage; outside requests are unavailable.
+        raise ValueError("Terrain tile extends outside observed elevation coverage")
     # Mapbox Terrain-RGB: elevation = -10000 + encoded * 0.1 metres.
     value = np.round((np.nan_to_num(tile, nan=0.0) + 10000) * 10).clip(0, 16777215).astype(np.uint32)
     rgb = np.stack([(value >> 16) & 255, (value >> 8) & 255, value & 255], axis=-1).astype(np.uint8)

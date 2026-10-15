@@ -3,86 +3,85 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#000000">
-  <title>Cutoff · Valley intelligence</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#f5f6f8">
+  <title>Cutoff · Flood exposure &amp; access</title>
   <link rel="stylesheet" href="/static/styles.css">
   <link rel="stylesheet" href="/static/controls.css">
+  <link rel="stylesheet" href="/static/workspace.css">
 </head>
 <body>
-  <div class="grain"></div>
+  <a class="skip-link" href="#overview">Skip to overview</a>
   <header class="topbar">
-    <a class="brand" href="/"><span class="brand-mark"><i data-lucide="triangle"></i></span><span><b>CUTOFF</b><small>VALLEY INTELLIGENCE</small></span></a>
-    <div class="topbar-center"><span><i data-lucide="satellite"></i>SENTINEL EVIDENCE</span><span><i data-lucide="mountain-snow"></i>3D TERRAIN</span><span><i data-lucide="route"></i>ACCESS MODEL</span></div>
-    <div class="server-pill"><span class="pulse"></span><span id="server-status">LOCAL / ONLINE</span></div>
+    <a class="brand" href="/" aria-label="Cutoff home"><span class="brand-mark"><i data-lucide="mountain"></i></span><span><b>Cutoff<span class="brand-period">.</span></b><small>Flood exposure &amp; access</small></span></a>
+    <nav class="workspace-nav" aria-label="Workspace navigation"><button class="secondary workspace-toggle" id="controls-toggle" aria-controls="sidebar" aria-expanded="false"><i data-lucide="folder-open"></i><span>Saved runs</span></button><button id="new-analysis" class="secondary"><i data-lucide="plus"></i><span>New analysis</span></button><a class="secondary results-link" href="#evidence"><i data-lucide="table-2"></i><span>Results &amp; exports</span></a></nav>
+    <div class="topbar-actions"><div class="server-pill"><span class="pulse"></span><span id="server-status">Local · online</span></div></div>
   </header>
-  <div class="disclaimer"><i data-lucide="shield-alert"></i><span id="disclaimer">Educational prototype — not an operational tool.</span></div>
+  <div class="disclaimer"><i data-lucide="shield-alert"></i><span id="disclaimer">Educational prototype — not an operational tool. Exposure is not confirmed damage.</span></div>
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
   <div class="shell">
-    <aside>
-      <div class="aside-title"><span>MISSION CONTROL</span><b>01</b></div>
-      <form id="run-form">
-        <label><span><i data-lucide="mountain-snow"></i>Valley preset</span><select id="valley-preset"><option value="trishuli">Bhote Koshi · Trishuli</option><option value="deir">Deir ez-Zor · Euphrates</option><option value="custom">Custom coordinates</option></select></label>
-        <label><span><i data-lucide="scan-line"></i>Analysis bounds</span><small>W · S · E · N</small><input name="bbox" id="bbox" value="85.28,28.10,85.42,28.29" required></label>
-        <label><span><i data-lucide="calendar-clock"></i>Event UTC</span><input name="event" id="event-time" value="2026-08-26T02:52:00Z" required></label>
-        <label><span><i data-lucide="database"></i>OSM snapshot</span><small>PRE-EVENT</small><input name="snapshot" id="snapshot" required></label>
-        <div class="choice-title"><i data-lucide="gauge"></i><span>PROCESSING MODE</span></div>
-        <div class="choice-grid mode-grid">
-          <label class="choice"><input type="radio" name="mode" value="cached"><span><b>Cached</b><small>Existing inputs only</small></span></label>
-          <label class="choice"><input type="radio" name="mode" value="fast" checked><span><b>Fast</b><small>Cache + cloud acquisition</small></span></label>
-          <label class="choice"><input type="radio" name="mode" value="full"><span><b>Full</b><small>SNAP processing</small></span></label>
-        </div>
-        <div class="choice-title"><i data-lucide="brain-circuit"></i><span>FLOOD MODEL</span></div>
-        <div class="choice-grid model-grid">
-          <label class="choice"><input type="radio" name="model" value="b0"><span><b>B0 baseline</b><small>No checkpoint needed</small></span></label>
-          <label class="choice"><input type="radio" name="model" id="checkpoint-option" checked><span><b>U-Net v1</b><small>Trained checkpoint</small></span></label>
-        </div>
-        <details class="advanced"><summary><i data-lucide="settings-2"></i>Advanced storage</summary><label><span><i data-lucide="folder-cog"></i>Cache directory</span><input name="cache" id="cache"></label></details>
-        <details class="advanced"><summary>Optional downstream trace</summary><label><span>Source longitude,latitude</span><input name="flowpath" id="flow-source" placeholder="85.52,28.25"><small>Leave empty for a normal analysis</small></label></details>
-        <button type="submit" class="primary"><span>RUN ANALYSIS</span><i data-lucide="arrow-up-right"></i></button>
-        <p class="form-message" id="form-message"></p>
-      </form>
-      <div class="history-head"><span>RUN ARCHIVE</span><button id="refresh-runs" title="Refresh runs"><i data-lucide="refresh-cw"></i></button></div>
-      <div id="run-list" class="run-list"></div>
-      <div class="aside-foot"><i data-lucide="radio-tower"></i><span>LOCAL PROCESSING NODE<br><b>127.0.0.1:8000</b></span></div>
+    <aside id="sidebar" class="sidebar" role="dialog" aria-modal="true" aria-labelledby="workspace-title" aria-hidden="true">
+      <div class="aside-title"><div><span class="eyebrow">YOUR WORKSPACE</span><h2 id="workspace-title">Analysis &amp; runs</h2></div><button class="icon-button workspace-toggle" id="close-controls" aria-label="Close controls"><i data-lucide="x"></i></button></div>
+      <div class="sidebar-tabs" role="tablist" aria-label="Workspace controls"><button id="archive-tab" data-panel="archive" class="active" role="tab" aria-selected="true" aria-controls="archive-panel">Run archive</button><button id="setup-tab" data-panel="setup" role="tab" aria-selected="false" aria-controls="setup-panel">New analysis</button></div>
+      <section id="archive-panel" class="archive-panel sidebar-panel" role="tabpanel" aria-labelledby="archive-tab">
+        <div class="history-head"><span><b id="run-count">0</b> saved runs</span><button class="icon-button" id="refresh-runs" title="Refresh runs" aria-label="Refresh runs"><i data-lucide="refresh-cw"></i></button></div>
+        <label class="search-field"><i data-lucide="search"></i><input id="run-search" type="search" placeholder="Search runs…" aria-label="Search run archive"></label>
+        <label class="filter-label"><span>Show</span><select id="run-filter" aria-label="Filter runs by status"><option value="all">All statuses</option><option value="complete">Complete</option><option value="partial">Partial</option><option value="failed">Failed</option><option value="running">Running</option></select></label>
+        <div id="run-list" class="run-list" aria-label="Saved analyses"></div>
+        <div class="pagination"><span id="archive-range" aria-live="polite">No saved runs</span><div><button class="icon-button" id="archive-prev" aria-label="Previous page of runs" disabled><i data-lucide="chevron-left"></i></button><button class="icon-button" id="archive-next" aria-label="Next page of runs" disabled><i data-lucide="chevron-right"></i></button></div></div>
+      </section>
+      <section id="setup-panel" class="sidebar-panel setup-panel" role="tabpanel" aria-labelledby="setup-tab" hidden>
+        <p class="panel-intro">Choose an area and event to map flood evidence and possible road-access loss.</p>
+        <form id="run-form">
+          <div class="form-fields">
+          <label for="valley-preset"><span>Study area</span><select id="valley-preset"><option value="trishuli">Bhote Koshi · Trishuli</option><option value="deir">Deir ez-Zor · Euphrates</option><option value="custom">Custom coordinates</option></select></label>
+          <label for="bbox"><span>Analysis bounds <small>W, S, E, N</small></span><input name="bbox" id="bbox" value="85.28,28.10,85.42,28.29" required spellcheck="false"></label>
+          <label for="event-time"><span>Event time <small>UTC</small></span><input name="event" id="event-time" value="2026-08-26T02:52:00Z" required spellcheck="false"></label>
+          <label for="snapshot"><span>OSM snapshot <small>Before event</small></span><input name="snapshot" id="snapshot" required spellcheck="false"></label>
+          <fieldset><legend>Processing mode</legend><div class="choice-grid mode-grid">
+            <label class="choice"><input type="radio" name="mode" value="cached"><span><b>Cached</b><small>Saved inputs</small></span></label>
+            <label class="choice"><input type="radio" name="mode" value="fast" checked><span><b>Fast</b><small>Cloud + cache</small></span></label>
+            <label class="choice"><input type="radio" name="mode" value="full"><span><b>Full</b><small>Local SNAP</small></span></label>
+          </div></fieldset>
+          <fieldset><legend>Flood model</legend><div class="choice-grid model-grid">
+            <label class="choice"><input type="radio" name="model" value="b0"><span><b>B0 baseline</b><small>Rule-based</small></span></label>
+            <label class="choice"><input type="radio" name="model" id="checkpoint-option" checked><span><b>U-Net v1</b><small>Trained model</small></span></label>
+          </div></fieldset>
+          <details class="advanced"><summary><i data-lucide="settings-2"></i>Storage settings<i class="disclosure-arrow" data-lucide="chevron-down"></i></summary><label for="cache"><span>Cache directory</span><input name="cache" id="cache" spellcheck="false"></label></details>
+          <details class="advanced"><summary><i data-lucide="route"></i>Downstream trace<i class="disclosure-arrow" data-lucide="chevron-down"></i></summary><label for="flow-source"><span>Source longitude, latitude</span><input name="flowpath" id="flow-source" placeholder="85.52,28.25" spellcheck="false"><small class="field-help">Optional. Leave empty for a standard analysis.</small></label></details>
+          </div>
+          <div class="form-submit"><button type="submit" class="primary"><i data-lucide="play"></i><span>RUN ANALYSIS</span><i data-lucide="arrow-right"></i></button><p class="form-message" id="form-message" role="status" aria-live="polite"></p></div>
+        </form>
+      </section>
+      <div class="aside-foot"><i data-lucide="hard-drive"></i><div><b>Local workspace</b><span>Runs and exports stay on this machine.</span></div></div>
     </aside>
-    <main>
+    <main id="overview" tabindex="-1">
       <section class="hero">
-        <div>
-          <div class="overline"><span id="run-state">AWAITING RUN</span><i></i><span>FLOOD RESPONSE SYSTEM</span></div>
-          <h1 id="run-title">See the valley.<br><em>Read the impact.</em></h1>
-          <p id="run-meta">Select a completed run to enter the terrain intelligence view.</p>
-        </div>
-        <div class="scenario-wrap"><span>ACCESS POLICY</span><div class="scenario-control">
-          <button data-scenario="A" class="active"><b>A</b><span><strong>Precautionary</strong><small>Any hazard contact</small></span></button>
-          <button data-scenario="B"><b>B</b><span><strong>Priority</strong><small>High confidence</small></span></button>
-          <button data-scenario="C"><b>C</b><span><strong>Bridges</strong><small>Approaches only</small></span></button>
-        </div></div>
+        <div class="hero-copy"><div class="overline"><span class="state-badge" id="run-state">AWAITING RUN</span><span class="eyebrow">SITUATION OVERVIEW</span></div><h1 id="run-title">Understand the impact.</h1><p id="run-meta">Select a saved analysis or start a new run.</p><p id="run-id" class="run-id" hidden></p></div>
+        <div class="hero-actions"><a id="quick-report" class="secondary" hidden><i data-lucide="download"></i>Situation report</a></div>
       </section>
-      <div id="alerts"></div>
-      <section class="metrics" id="metrics">
-        <div class="metric skeleton"></div><div class="metric skeleton"></div><div class="metric skeleton"></div><div class="metric skeleton"></div>
+      <div id="alerts" aria-live="polite"></div>
+      <section class="metrics" id="metrics" aria-label="Analysis summary"><div class="metric empty-metric"><span>Mapped hazard</span><strong>—</strong><p>Awaiting an analysis</p></div><div class="metric empty-metric"><span>Exposed buildings</span><strong>—</strong><p>Awaiting an analysis</p></div><div class="metric empty-metric"><span>Cut-off settlements</span><strong>—</strong><p>Awaiting an analysis</p></div><div class="metric empty-metric"><span>Closed roads</span><strong>—</strong><p>Awaiting an analysis</p></div></section>
+      <section class="scenario-bar" aria-label="Road-access scenario"><div class="scenario-heading"><i data-lucide="route"></i><div><b>Road-access scenario</b><span>Compare closure assumptions</span></div></div><div class="scenario-control" role="group" aria-label="Select an access scenario">
+        <button data-scenario="A" class="active" aria-pressed="true"><b>A</b><span><strong>Precautionary</strong><small>Any hazard proximity</small></span></button>
+        <button data-scenario="B" aria-pressed="false"><b>B</b><span><strong>High confidence</strong><small>Sustained overlap</small></span></button>
+        <button data-scenario="C" aria-pressed="false"><b>C</b><span><strong>Bridges only</strong><small>Affected approaches</small></span></button>
+      </div></section>
+      <section class="map-zone" aria-label="Map and settlement access">
+        <div class="map-card"><div class="map-heading"><div><i data-lucide="map"></i><h2>Situation map</h2></div><div class="map-view-switch" role="group" aria-label="Map presentation"><button data-map-view="story" class="active" aria-pressed="true"><i data-lucide="map"></i>Before / after</button><button data-map-view="terrain" aria-pressed="false"><i data-lucide="mountain"></i>3D terrain</button></div><span id="map-status" class="map-status">No run selected</span></div><div class="map-viewport"><iframe id="map" title="Satellite evidence and road-access map" allow="fullscreen"></iframe><div class="map-empty" id="map-empty"><div class="radar"><i data-lucide="mountain-snow"></i></div><h3>Your area, in context.</h3><p>Choose a run to explore satellite evidence,<br>terrain, and settlement access.</p><button id="empty-select-run" class="secondary"><i data-lucide="folder-open"></i>Browse saved runs</button></div></div><div class="map-foot"><i data-lucide="mouse-pointer-2"></i><span>Drag to explore · Scroll to zoom · Click a feature for evidence</span></div></div>
+        <article class="intel-panel" id="details"><div class="panel-kicker">ROAD ACCESS</div><h2>Settlement access</h2><p class="muted">Connection status and settlements to review will appear here.</p><div class="panel-empty"><i data-lucide="map-pin"></i><p>No analysis selected</p></div></article>
       </section>
-      <section class="map-zone">
-        <div class="map-card">
-          <div class="map-edge-label"><i data-lucide="orbit"></i><span>VALLEY VIEW / LIVE COMPOSITE</span></div>
-          <iframe id="map" title="3D satellite terrain, hazard, and access map"></iframe>
-          <div class="map-empty" id="map-empty"><div class="radar"><i data-lucide="mountain"></i></div><b>NO TERRAIN LOADED</b><span>Select a run from the archive</span></div>
-        </div>
-        <div class="intel-panel" id="details"><div class="panel-kicker">FIELD INTELLIGENCE</div><h2>Situation<br>summary</h2><p class="muted">Scenario intelligence will appear after a run is selected.</p></div>
-      </section>
+      <div class="section-heading" id="evidence"><div><span class="eyebrow">RESULTS &amp; EXPORTS</span><h2>The evidence behind the map</h2></div><p>Exposure indicates contact with mapped hazard, not confirmed damage.</p></div>
       <section class="data-grid">
-        <article class="data-card"><div class="card-head"><span><i data-lucide="waves"></i>HAZARD EVIDENCE</span><b>01</b></div><div id="hazard-table"></div></article>
-        <article class="data-card"><div class="card-head"><span><i data-lucide="building-2"></i>EXPOSURE</span><b>02</b></div><div id="exposure-table"></div></article>
-        <article class="data-card"><div class="card-head"><span><i data-lucide="download"></i>EXPORTS</span><b>03</b></div><div id="downloads" class="downloads"></div></article>
+        <article class="data-card"><div class="card-head"><span><i data-lucide="waves"></i>Hazard evidence</span><small>km²</small></div><div id="hazard-table" class="table-wrap"><p class="empty-copy">Select an analysis to view mapped areas.</p></div></article>
+        <article class="data-card"><div class="card-head"><span><i data-lucide="building-2"></i>Infrastructure exposure</span></div><div id="exposure-table" class="table-wrap"><p class="empty-copy">Exposed assets will appear here.</p></div></article>
+        <article class="data-card export-card"><div class="card-head"><span><i data-lucide="download"></i>Download results</span></div><p class="card-description">Take the report and mapped evidence with you.</p><div id="downloads" class="downloads"><p class="empty-copy">Exports are available after a run completes.</p></div></article>
       </section>
-      <section class="data-grid">
-        <article class="data-card"><div class="card-head"><span>INPUTS AND PROVENANCE</span></div><div id="provenance"></div></article>
-        <article class="data-card"><div class="card-head"><span>LIMITATIONS AND FLOW PATH</span></div><div id="limitations"></div></article>
-        <article class="data-card" id="evaluation-card" hidden><div class="card-head"><span>FROZEN-RUN EVALUATION</span></div><div id="evaluation"></div></article>
+      <section class="support-grid">
+        <details class="data-card disclosure-card"><summary><span><i data-lucide="database"></i>Inputs &amp; provenance</span><i data-lucide="chevron-down"></i></summary><p class="card-description">Acquisition dates, satellite scenes, and the pre-event OSM snapshot.</p><div id="provenance" class="table-wrap"></div></details>
+        <details class="data-card disclosure-card"><summary><span><i data-lucide="info"></i>Limitations &amp; downstream trace</span><i data-lucide="chevron-down"></i></summary><div id="limitations"></div></details>
+        <details class="data-card disclosure-card" id="evaluation-card" hidden><summary><span><i data-lucide="chart-no-axes-combined"></i>Frozen-run evaluation</span><i data-lucide="chevron-down"></i></summary><div id="evaluation"></div></details>
       </section>
-      <footer><div><span class="footer-mark">CUTOFF</span><span>Mapping flood exposure and access from space</span></div><div id="attribution"></div></footer>
+      <footer><div><span class="footer-mark">Cutoff.</span><span>Mapping flood exposure and access from space.</span></div><div id="attribution"><p>Sentinel · Copernicus DEM · Pre-event OpenStreetMap</p></div></footer>
     </main>
   </div>
   <script src="/static/vendor/lucide.min.js"></script>

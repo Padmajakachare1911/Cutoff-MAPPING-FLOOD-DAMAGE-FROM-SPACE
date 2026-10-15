@@ -15,3 +15,18 @@ These strings are copied verbatim from the Track B problem statement. They appea
 
 ## OpenStreetMap licence
 OSM-derived files that we publish (exposure and settlement layers) stay under ODbL 1.0 and carry "Contains OpenStreetMap data, ODbL 1.0 - © OpenStreetMap contributors."
+
+## Historical display context
+
+The map uses the Sentinel-2 cloudless 2025 mosaic solely for geographic
+context outside the dated scene footprint. It is not an event observation,
+training dataset, analysis input or contemporary infrastructure basemap.
+
+Attribution shown alongside the map: "EOxCloudless — https://cloudless.eox.at by
+EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2025)".
+The mosaic is [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+for this non-commercial educational prototype; the code remains separately licensed.
+See [provider terms](https://maps.eox.at/) and [release licence](https://cloudless.eox.at/documentation/license).
+Only the Sentinel-2 cloudless layer is requested; the provider's terrain, labels,
+population and other basemap products are not used. Dated RGB and river context
+under `display/` retain their own acquisition/snapshot provenance.

@@ -7,8 +7,9 @@ import pytest
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="JavaScript runtime not installed")
-def test_flow_animation_handles_first_frame_earlier_than_initialization():
-    source = Path(__file__).resolve().parents[1] / "app/static/map.js"
+@pytest.mark.parametrize('filename', ['map.js', 'terrain-map.js'])
+def test_flow_animation_handles_first_frame_earlier_than_initialization(filename):
+    source = Path(__file__).resolve().parents[1] / 'app/static' / filename
     script = r"""
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
 const source=fs.readFileSync(process.argv[1],'utf8');

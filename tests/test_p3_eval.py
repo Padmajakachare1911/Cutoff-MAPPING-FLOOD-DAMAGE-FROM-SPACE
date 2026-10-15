@@ -1,6 +1,8 @@
 import importlib.util
+import json
 from pathlib import Path
 
+import geopandas as gpd
 import yaml
 
 from cutoff.mock import make_mock_run
@@ -34,3 +36,16 @@ def test_scenario_table_and_dropout_are_reproducible(tmp_path):
     assert table[0]["cut_off_jaccard_vs_A"] == 1
     assert first == second
     assert set(first) == {"A", "B", "C"}
+
+
+def test_scenario_table_counts_bridge_ways_instead_of_densified_segments(tmp_path):
+    run_dir = make_mock_run(tmp_path / "mock")
+    path = run_dir / "roads_status_A.gpkg"
+    roads = gpd.read_file(path).iloc[:2].copy()
+    roads["bridge"], roads["closed"] = True, True
+    roads.to_file(path, driver="GPKG")
+    results_path = run_dir / "results.json"
+    data = json.loads(results_path.read_text(encoding="utf-8"))
+    data["access"][0]["closed_bridges"] = 1  # two segments belong to one bridge way
+    results_path.write_text(json.dumps(data), encoding="utf-8")
+    assert _module().scenario_table(run_dir)[0]["closed_bridges"] == 1

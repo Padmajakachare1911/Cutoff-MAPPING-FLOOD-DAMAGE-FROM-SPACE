@@ -131,21 +131,35 @@ def snap_to_grid(snap_tif: Path, grid: Grid) -> np.ndarray:
 def fetch_s1_scene_snap(scene: Scene, grid: Grid, cfg, log: Callable | None = None) -> np.ndarray:
     """(4, H, W) float32: VV, VH (linear sigma0, Lee-Sigma filtered by SNAP), LIA, dataMask on the grid."""
     from cutoff.data.s1_acquire import grid_hash
+    from rasterio.errors import RasterioIOError
 
     gpt = find_gpt()
     cache = Path(cfg.get("run", {}).get("cache_dir", "cache/")) / "s1"
-    product = download_product(scene, cache / "products" / f"{scene.id}.zip", cfg, log=log)
     out_tif = cache / "snap" / f"{scene.id}_{grid_hash(grid)}.tif"
-    if not out_tif.exists():
-        out_tif.parent.mkdir(parents=True, exist_ok=True)
-        cmd = gpt_command(gpt, product, out_tif, grid)
-        t0 = time.time()
+    if out_tif.exists():
+        try:
+            return snap_to_grid(out_tif, grid)
+        except (RasterioIOError, ValueError):
+            if log:
+                log(event="snap_cache_invalid", scene=scene.id, path=str(out_tif))
+    product = download_product(scene, cache / "products" / f"{scene.id}.zip", cfg, log=log)
+    out_tif.parent.mkdir(parents=True, exist_ok=True)
+    # SNAP may leave a readable but incomplete GeoTIFF even when gpt fails.
+    # Publish only after a successful process and raster read, retaining old cache on failure.
+    tmp = _tmp_path(out_tif).with_suffix(".tmp.tif")
+    cmd = gpt_command(gpt, product, tmp, grid)
+    t0 = time.time()
+    try:
         r = subprocess.run(cmd, capture_output=True, text=True)
-        if r.returncode != 0 or not out_tif.exists():
+        if r.returncode != 0 or not tmp.exists():
             raise RuntimeError(f"gpt failed ({r.returncode}): {(r.stderr or r.stdout)[-2000:]}")
+        arr = snap_to_grid(tmp, grid)
+        tmp.replace(out_tif)
         if log:
             log(event="snap_gpt", scene=scene.id, seconds=round(time.time() - t0, 1))
-    return snap_to_grid(out_tif, grid)
+        return arr
+    finally:
+        tmp.unlink(missing_ok=True)
 
 
 # --------------------------------------------------------------------------- E3c helper

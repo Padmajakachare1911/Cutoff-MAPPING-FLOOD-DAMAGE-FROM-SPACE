@@ -4,6 +4,7 @@ from pathlib import Path
 import geopandas as gpd
 import networkx as nx
 import numpy as np
+import pytest
 import yaml
 from shapely.geometry import LineString, Point, box
 
@@ -114,3 +115,38 @@ def test_empty_road_coverage_reports_unknown_without_crashing(tmp_path):
         assert scenario["closed_road_km"] == 0 and scenario["closed_bridges"] == 0
     validate_run_dir(run_dir, keys=["settlements_A", "settlements_B", "settlements_C",
                                     "roads_A", "roads_B", "roads_C"])
+
+
+@pytest.mark.parametrize("attributes", [
+    {"bridge": [True, False], "layer": ["1", "0"]},
+    {"tunnel": [True, False], "layer": ["-1", "0"]},
+    {"layer": ["1", "0"]},
+])
+def test_densification_does_not_connect_grade_separated_crossings(attributes):
+    roads = _roads([LineString([(0, 0), (200, 0)]),
+                    LineString([(100, -100), (100, 100)])], **attributes)
+    graph = build_graph(node_ways(roads, 100))
+    assert nx.number_connected_components(graph) == 2
+    settlements = gpd.GeoDataFrame({"sid": ["S"], "name": ["Underpass"]},
+                                    geometry=[Point(100, -100)], crs=CRS)
+    targets = gpd.GeoDataFrame({"tid": ["T"]}, geometry=[Point(200, 0)], crs=CRS)
+    assert access_status(graph, settlements, targets, set(), {"snap_max_m": 1}).iloc[0].status == "unknown"
+
+
+def test_bridge_connects_to_roads_at_shared_way_endpoints():
+    roads = _roads([LineString([(0, 0), (200, 0)]),
+                    LineString([(-100, 0), (0, 0)]),
+                    LineString([(200, 0), (300, 0)])],
+                   bridge=[True, False, False], layer=["1", "0", "0"])
+    assert nx.number_connected_components(build_graph(node_ways(roads))) == 1
+
+
+@pytest.mark.parametrize("scenario", ["A", "B", "C"])
+def test_bridge_approaches_require_high_confidence_hazard_in_every_scenario(scenario):
+    roads = _roads([LineString([(0, 0), (200, 0)])], bridge=[True], layer=["1"])
+    segments = node_ways(roads)
+    possible = gpd.GeoDataFrame({"class": [2]}, geometry=[box(-5, -5, 5, 5)], crs=CRS)
+    confirmed = possible.copy()
+    confirmed["class"] = 1
+    assert closed_segments(segments, possible, scenario) == set()
+    assert closed_segments(segments, confirmed, scenario) == {0, 1}

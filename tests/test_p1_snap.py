@@ -266,3 +266,48 @@ def test_rejected_cdse_login_reports_server_reason_without_password(monkeypatch)
     with pytest.raises(sh.LoginRejected, match="Account is not fully set up") as ei:
         snap.cdse_token(CFG)
     assert "P@ss#1" not in str(ei.value)
+
+
+def test_failed_gpt_output_is_not_reused_on_retry(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    scene = next(s for s in scenes_from_items(ITEMS, (85.28, 28.10, 85.42, 28.29)) if s.id == POST_ID)
+    grid = Grid(epsg=32645, transform=(10.0, 0.0, 330000.0, 0.0, -10.0, 3115000.0), width=10, height=10)
+    cfg = {"run": {"cache_dir": str(tmp_path)}}
+    calls = []
+
+    def run(cmd, **kwargs):
+        calls.append(cmd)
+        out = Path(next(c for c in cmd if c.startswith("-Poutput=")).split("=", 1)[1])
+        if len(calls) == 1:
+            out.write_bytes(b"interrupted GeoTIFF")
+            return SimpleNamespace(returncode=1, stdout="", stderr="processing interrupted")
+        _write_snap_like(out, grid, np.full((10, 10), 0.05), np.full((10, 10), 0.01), np.full((10, 10), 40))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(snap, "find_gpt", lambda: "gpt")
+    monkeypatch.setattr(snap, "download_product", lambda sc, dest, cfg, log=None: dest)
+    monkeypatch.setattr(snap.subprocess, "run", run)
+    with pytest.raises(RuntimeError, match="processing interrupted"):
+        snap.fetch_s1_scene_snap(scene, grid, cfg)
+    arr = snap.fetch_s1_scene_snap(scene, grid, cfg)
+    assert len(calls) == 2 and np.allclose(arr[0], 0.05)
+
+
+def test_gpt_success_with_invalid_output_does_not_publish_cache(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    scene = next(s for s in scenes_from_items(ITEMS, (85.28, 28.10, 85.42, 28.29)) if s.id == POST_ID)
+    grid = Grid(epsg=32645, transform=(10.0, 0.0, 330000.0, 0.0, -10.0, 3115000.0), width=10, height=10)
+
+    def run(cmd, **kwargs):
+        out = Path(next(c for c in cmd if c.startswith("-Poutput=")).split("=", 1)[1])
+        out.write_bytes(b"not a raster")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(snap, "find_gpt", lambda: "gpt")
+    monkeypatch.setattr(snap, "download_product", lambda sc, dest, cfg, log=None: dest)
+    monkeypatch.setattr(snap.subprocess, "run", run)
+    with pytest.raises(Exception):
+        snap.fetch_s1_scene_snap(scene, grid, {"run": {"cache_dir": str(tmp_path)}})
+    assert not list((tmp_path / "s1" / "snap").glob("*.tif"))

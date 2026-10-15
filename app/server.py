@@ -45,12 +45,22 @@ DOWNLOADS = {
     "settlements_C.gpkg",
 }
 DISPLAY_LAYERS = {
+    "terrain_relief": ("display/terrain_relief.tif", "rgb", 1),
     "hazard": ("hazard_class.tif", "hazard", 1),
     "no_observation": ("hazard_class.tif", "no_obs", 1),
     "score": ("p_model.tif", "score", 3),
     "pre": ("s1_pre_mean.tif", "gray", 1),
     "post": ("s1_post.tif", "gray", 1),
     "s2": ("s2_water.tif", "s2", 1),
+    "flood": ("hazard_class.tif", "flood", 1),
+    "changes": ("hazard_class.tif", "changes", 1),
+    "permanent": ("hazard_class.tif", "permanent", 1),
+    "before_rgb": ("display/before_rgb.tif", "rgb", 1),
+    "after_rgb": ("display/after_rgb.tif", "rgb", 1),
+    "before_water": ("display/before_water.tif", "water", 1),
+    "after_water": ("display/after_water.tif", "s2", 1),
+    "before_cloud": ("display/before_scl.tif", "cloud", 1),
+    "after_cloud": ("display/after_scl.tif", "cloud", 1),
 }
 PROCESSES: dict[str, subprocess.Popen] = {}
 PROCESS_LOCK = threading.Lock()
@@ -278,6 +288,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 from map_layers import vector_data
 
                 vectors = {}
+                terrain_manifest = root / "display/terrain.json"
+                terrain_info = json.loads(terrain_manifest.read_text(encoding="utf-8")) if terrain_manifest.is_file() else {}
                 for key, filename in {
                     "roads": "osm_roads.gpkg",
                     "exposed_buildings": "exposure_buildings.gpkg",
@@ -286,6 +298,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "settlements": f"settlements_{scenario}.gpkg",
                     "flowpath": "flowpath.gpkg",
                     "hazard_polygons": "hazard.gpkg",
+                    "places": "osm_places.gpkg",
+                    "river_context": "display/osm_water.gpkg",
+                    "context_flow": "display/flowpath.gpkg",
+                    "contours": "display/contours.gpkg",
                 }.items():
                     if key in {"exposed_buildings", "exposed_roads"} and results.exposure is None:
                         continue
@@ -295,15 +311,19 @@ class DashboardHandler(BaseHTTPRequestHandler):
                         continue
                     path = root / filename
                     if path.is_file():
-                        data = vector_data(path)
+                        data = vector_data(path, escape_strings=False)
                         if key == "closed_roads":
                             data["features"] = [f for f in data["features"] if f["properties"].get("closed")]
+                        if key == "settlements":
+                            for feature in data["features"]:
+                                feature["properties"].update(terrain_info.get("markers", {}).get(feature["properties"].get("sid"), {}))
                         vectors[key] = data
                 layers = {}
                 for name, (filename, kind, band) in DISPLAY_LAYERS.items():
                     if (root / filename).is_file():
                         bounds = display_bounds(root / filename)
                         layers[name] = {"url": f"/api/layers/{run_id}/{name}.png", "bounds": bounds}
+                manifest = root / 'display/manifest.json'
                 return self.send_json({
                     "run_id": run_id,
                     "scenario": scenario,
@@ -311,15 +331,39 @@ class DashboardHandler(BaseHTTPRequestHandler):
                     "hazard_url": f"/api/layers/{run_id}/hazard.png",
                     "vectors": vectors,
                     "layers": layers,
-                    "terrain_url": f"/api/terrain/{run_id}/{{z}}/{{x}}/{{y}}.png" if (root / "dem.tif").is_file() else None,
+                    "display": json.loads(manifest.read_text(encoding='utf-8')) if manifest.is_file() else {},
+                    "terrain": {k: v for k, v in terrain_info.items() if k != "markers"},
+                    "analysis": {"model_version": results.model_version,
+                                 "inputs": results.inputs.model_dump(mode='json'),
+                                 "hazard": results.hazard.model_dump(mode='json'),
+                                 "flowpath": results.flowpath.model_dump(mode='json') if results.flowpath else None},
+                    "terrain_url": f"/api/terrain/{run_id}/{{z}}/{{x}}/{{y}}.png?size=512" if (root / "dem.tif").is_file() else None,
                 })
             if parsed.path.startswith("/api/terrain/"):
                 parts = unquote(parsed.path.removeprefix("/api/terrain/")).split("/")
                 if len(parts) != 4 or not parts[3].endswith(".png"):
                     raise ValueError("Invalid terrain tile")
                 from terrain_tiles import terrain_png
-                data = terrain_png(run_root(parts[0]) / "dem.tif", int(parts[1]), int(parts[2]), int(parts[3][:-4]))
+                root = run_root(parts[0])
+                wide = root / "display/terrain_dem.tif"
+                size = int(parse_qs(parsed.query).get("size", ["256"])[0])
+                try:
+                    data = terrain_png(wide if wide.is_file() else root / "dem.tif", int(parts[1]), int(parts[2]), int(parts[3][:-4]), size, strict=True)
+                except ValueError as exc:
+                    if "outside observed" in str(exc):
+                        return self.send_error_json(str(exc), HTTPStatus.NOT_FOUND)
+                    raise
                 return self.send_bytes(data, "image/png")
+            if parsed.path.startswith('/api/context/2025/'):
+                parts = parsed.path.removeprefix('/api/context/2025/').split('/')
+                if len(parts) != 3 or not parts[2].endswith('.jpg'):
+                    raise ValueError('Invalid historical context tile')
+                from context_tiles import historical_tile
+                try:
+                    data = historical_tile(default_cache(), int(parts[0]), int(parts[1]), int(parts[2][:-4]))
+                except Exception:
+                    return self.send_error_json('Historical context unavailable; dated local imagery remains available', HTTPStatus.NOT_FOUND)
+                return self.send_bytes(data, 'image/jpeg')
             if parsed.path.startswith("/api/layers/"):
                 parts = unquote(parsed.path.removeprefix("/api/layers/")).split("/", 1)
                 if len(parts) != 2 or parts[1].removesuffix(".png") not in DISPLAY_LAYERS:

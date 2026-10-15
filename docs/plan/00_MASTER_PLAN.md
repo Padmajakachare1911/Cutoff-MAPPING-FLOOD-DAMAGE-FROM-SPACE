@@ -9,7 +9,12 @@
 **UI implementation update (14 October 2026):** the user selected the new dashboard
 from PR #38 instead of Streamlit. `app/server.py` and `app/static/` implement P4.3's
 same feature requirements. Maps use run-local Sentinel layers and Copernicus DEM,
-with dated OSM vectors; no external imagery or terrain basemap datasets are loaded.
+with dated OSM vectors. The 15 October map presentation adds explicitly dated
+Sentinel-2 before/after photographs and wider Copernicus GLO-30 terrain context.
+Optional EOX Sentinel-2 cloudless 2025 tiles outside the dated coverage are cached
+geographic context only, never event evidence or model input; their separate
+CC BY-NC-SA 4.0 attribution is retained. See `P4_MAP_STORY.md` and
+`P4_TERRAIN_REVIEW.md` under `reports/` for the presentation and placement audit.
 
 **Tech stack:** Python 3.11, rasterio/GDAL, geopandas/shapely 2, pyflwdir, NetworkX, PyTorch + segmentation-models-pytorch, pystac-client, Sentinel Hub Process API on CDSE, ESA SNAP (full mode), ohsome API, Streamlit + folium, Jinja2 + WeasyPrint/xhtml2pdf, pydantic, pytest.
 

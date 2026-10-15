@@ -32,3 +32,6 @@ Thumbs.db
 
 # agent scratch
 .superpowers/
+
+# Local video production is kept outside the project integration.
+/video/

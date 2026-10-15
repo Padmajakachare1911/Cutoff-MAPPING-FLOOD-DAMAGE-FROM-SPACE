@@ -10,6 +10,7 @@ import numpy as np
 
 from cutoff.contracts import ACCESS_STATUSES, SCENARIOS, VECTORS
 from cutoff.geo.network import access_status, build_graph, closed_segments, edge_dropout, node_ways
+from cutoff.report.schema import Results
 
 
 def jaccard(left: set[str], right: set[str]) -> float:
@@ -21,6 +22,8 @@ def jaccard(left: set[str], right: set[str]) -> float:
 def scenario_table(run_dir: str | Path) -> list[dict]:
     """Read produced A/B/C layers and return the frozen E6 scenario comparison rows."""
     root = Path(run_dir)
+    results = Results.model_validate_json((root / "results.json").read_text(encoding="utf-8"))
+    summaries = {row.scenario: row for row in results.access}
     rows, cutoff_sets = [], {}
     for scenario in SCENARIOS:
         settlements = gpd.read_file(root / VECTORS[f"settlements_{scenario}"][0])
@@ -28,7 +31,9 @@ def scenario_table(run_dir: str | Path) -> list[dict]:
         cutoff_sets[scenario] = set(settlements.loc[settlements.status == "cut_off", "sid"].astype(str))
         closed = roads.loc[roads.closed.astype(bool)]
         rows.append({"scenario": scenario, "closed_road_km": round(float(closed.length.sum()) / 1000, 3),
-                     "closed_bridges": int(closed.loc[closed.bridge.astype(bool), "seg_id"].nunique()),
+                     # The access stage counts original bridge ways. Segment IDs count
+                     # the same long bridge repeatedly after 100 m densification.
+                     "closed_bridges": summaries[scenario].closed_bridges,
                      **{name: int((settlements.status == name).sum()) for name in ACCESS_STATUSES}})
     baseline = cutoff_sets["A"]
     for row in rows:

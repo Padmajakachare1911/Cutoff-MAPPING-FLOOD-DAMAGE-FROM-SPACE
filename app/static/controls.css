@@ -1,66 +1,21 @@
-/* Guided controls and descriptive access-policy selector. */
-@media (min-width: 821px) {
-  .topbar { grid-template-columns: 292px 1fr 260px; }
-  .shell { grid-template-columns: 320px minmax(0, 1fr); }
-}
-
-.choice-title {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 15px 0 7px;
-  color: #c6b6af;
-  font: 700 9px "Space Grotesk";
-  letter-spacing: .1em;
-}
-.choice-title svg { width: 13px; color: #f34125; }
-.choice-grid { display: grid; gap: 5px; }
-.mode-grid { grid-template-columns: repeat(3, 1fr); }
-.model-grid { grid-template-columns: 1fr 1fr; }
-.choice { margin: 0; cursor: pointer; }
-.choice input { position: absolute; opacity: 0; pointer-events: none; }
-.choice > span {
-  display: flex;
-  min-height: 52px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-  padding: 8px;
-  border: 1px solid #2f211e;
-  background: #090605;
-  color: #7d6e68;
-  transition: .22s;
-}
-.choice > span b { font: 600 10px "Space Grotesk"; color: #cdbdb7; }
-.choice > span small { float: none; margin: 0; color: #665954; font-size: 7px; letter-spacing: .03em; }
-.choice input:checked + span {
-  border-color: #bd2d19;
-  background: linear-gradient(145deg, rgba(131, 0, 0, .35), rgba(30, 7, 4, .8));
-  box-shadow: inset 2px 0 #ff371d, 0 7px 18px rgba(125, 0, 0, .1);
-}
-.choice input:checked + span b { color: #fff; }
-.advanced { margin: 12px 0; border: 1px solid #2a1b17; background: #080605; }
-.advanced summary { display: flex; align-items: center; gap: 7px; padding: 9px; color: #887771; font: 700 8px "Space Grotesk"; letter-spacing: .08em; cursor: pointer; }
-.advanced summary svg { width: 12px; color: #b8311e; }
-.advanced label { padding: 0 9px 9px; margin: 0; }
-
-.scenario-control { display: grid; grid-template-columns: repeat(3, minmax(108px, 1fr)); gap: 3px; border: 0; background: transparent; padding: 0; }
-.scenario-control button { width: auto; height: 52px; display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid #38201a; background: #0b0706; text-align: left; }
-.scenario-control button > b { display: grid; place-items: center; width: 25px; height: 25px; border: 1px solid #4a2921; font: 700 10px "Space Grotesk"; }
-.scenario-control button span, .scenario-control button strong, .scenario-control button small { display: block; }
-.scenario-control button strong { font: 600 9px "Space Grotesk"; }
-.scenario-control button small { margin-top: 2px; color: #695b56; font-size: 7px; }
-.scenario-control button.active { background: linear-gradient(135deg, rgba(131, 0, 0, .8), rgba(62, 5, 2, .9)); border-color: #d42614; }
-.scenario-control button.active > b { border-color: #ff6147; background: #b90202; }
-.scenario-control button.active small { color: #d79b8c; }
-.intel-panel::after { content: attr(data-scenario); }
-
-@media (max-width: 1150px) { .scenario-control { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 520px) {
-  .scenario-control { grid-template-columns: 1fr; }
-  .scenario-control button { width: 100%; }
-}
-
-[hidden]{display:none!important}#provenance{overflow-wrap:anywhere}#provenance td:first-child{min-width:105px;overflow-wrap:normal}#limitations ul{padding-left:16px}#evaluation pre{white-space:pre-wrap;font-size:11px}.dot.partial{background:#ff9a00}
-.choice input:disabled+span{opacity:.4;cursor:not-allowed}
+/* Choice controls use the dashboard's spacing, focus and typography. */
+fieldset {margin:0 0 18px;padding:0;border:0;min-width:0}
+legend {font-size:13px;font-weight:600;margin-bottom:8px;padding:0}
+.choice-grid {display:grid;gap:7px}.mode-grid {grid-template-columns:repeat(3,minmax(0,1fr))}.model-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+.choice {margin:0;position:relative;cursor:pointer}.choice input {position:absolute;width:1px;height:1px;margin:0;opacity:0}
+.choice>span {display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:4px;min-height:66px;padding:9px 8px;border:1px solid #dce2e9;border-radius:8px;background:#fff}
+.choice b {font-size:13px;font-weight:600}.choice>span small {color:#6b7888;font-size:11px;font-weight:400;line-height:1.25}
+.choice input:checked+span {border-color:#c96e62;background:#fff4f1;box-shadow:0 0 0 1px #c96e62}.choice input:checked+span b {color:#a3352a}
+.choice input:focus-visible+span {outline:3px solid #3682bd;outline-offset:3px}.choice input:disabled+span {background:#f5f6f8;color:#8f99a5;border-color:#e7eaef;cursor:not-allowed}
+.advanced {border:1px solid var(--line);border-radius:8px;margin:10px 0}.advanced summary {display:flex;align-items:center;gap:8px;padding:11px 10px;font-size:13px;color:#526173;list-style:none}
+.advanced summary::-webkit-details-marker {display:none}.advanced summary>svg {width:16px;height:16px;color:#7a8796}.advanced .disclosure-arrow {margin-left:auto;transition:transform .2s}
+.advanced[open] .disclosure-arrow {transform:rotate(180deg)}.advanced label {padding:0 10px 11px;margin:0}.primary {margin-top:18px}
+.scenario-control {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
+.scenario-control button {display:flex;align-items:center;text-align:left;gap:9px;min-height:55px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+.scenario-control button>b {display:grid;place-items:center;width:28px;height:28px;flex:0 0 28px;border-radius:7px;font-size:13px;background:#f0f3f6;color:#6d7c8f}
+.scenario-control button span,.scenario-control button strong,.scenario-control button small {display:block}
+.scenario-control button strong {font-size:13px;font-weight:600;white-space:nowrap}.scenario-control button small {margin-top:3px;color:var(--muted);font-size:11px;line-height:1.3;white-space:nowrap}
+.scenario-control button:hover {border-color:#bdc6d1;background:#fafbfd}.scenario-control button.active {border-color:#d6978e;background:#fff3ef}
+.scenario-control button.active>b {background:var(--accent);color:#fff}.scenario-control button.active strong {color:#a0372b}
+@media (max-width:1250px) {.scenario-control {width:100%}}
+@media (max-width:600px) {.scenario-control {gap:6px}.scenario-control button {padding:10px 7px;flex-direction:column;align-items:flex-start;gap:7px;min-width:0}.scenario-control button strong {font-size:12px;white-space:normal}.scenario-control button small {font-size:10px;white-space:normal}}

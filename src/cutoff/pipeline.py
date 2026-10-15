@@ -71,6 +71,7 @@ LIMITATIONS = [
     "Exposure is not damage: no structural assessment is made.",
     "The model score is calibrated on global, mostly lowland floods, not on the Himalaya.",
     "Access results depend on OpenStreetMap completeness; 'unknown' means unmapped, not safe.",
+    "Hazard is observed only inside the analysis AOI; routing roads outside it are assumed open.",
     "Educational prototype, not an operational tool.",
     "Permanent-water scores are gated by terrain and clear optical evidence; this class is excluded from hazard exposure.",
 ]
